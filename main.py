@@ -103,69 +103,32 @@ Use /remove to delete saved thumbnail.
     await update.message.reply_text(help_message, parse_mode='Markdown')
 
 async def remover(update, context):
-    """Remove saved thumbnail."""
     user_id = update.message.from_user.id
     if user_id in user_data:
         user_data.pop(user_id, None)
-        return await update.message.reply_text(
-            "✅ Thumbnail Removed.",
-            reply_to_message_id=update.message.message_id
-        )
-    await update.message.reply_text(
-        "⚠️ First Add A Thumbnail.",
-        reply_to_message_id=update.message.message_id
-    )
+        return await update.message.reply_text("✅ Thumbnail Removed.", reply_to_message_id=update.message.message_id)
+    await update.message.reply_text("⚠️ First Add A Thumbnail.", reply_to_message_id=update.message.message_id)
 
 async def photo_handler(update, context):
-    """Handle photo messages."""
     user_id = update.message.from_user.id
     user_data[user_id] = {"photo_id": update.message.photo[-1].file_id}
-    await update.message.reply_text(
-        "✅ New Thumbnail Saved.",
-        reply_to_message_id=update.message.message_id
-    )
+    await update.message.reply_text("✅ New Thumbnail Saved.", reply_to_message_id=update.message.message_id)
 
 async def video_handler(update, context):
-    """Handle video messages and add thumbnail."""
     user_id = update.message.from_user.id
-    
     if user_id not in user_data or "photo_id" not in user_data[user_id]:
-        return await update.message.reply_text(
-            "❌ Send A Photo First.",
-            reply_to_message_id=update.message.message_id
-        )
+        return await update.message.reply_text("❌ Send A Photo First.", reply_to_message_id=update.message.message_id)
+    msg = await update.message.reply_text("🔄 Adding Cover Please Wait...", reply_to_message_id=update.message.message_id)
     
-    msg = await update.message.reply_text(
-        "🔄 Adding Cover Please Wait...",
-        reply_to_message_id=update.message.message_id
-    )
+    cover = user_data[user_id]["photo_id"]
+    video = update.message.video.file_id
+    media = InputMediaVideo(media=video, caption="✅ Cover Added.", supports_streaming=True, cover=cover)
     
     try:
-        cover = user_data[user_id]["photo_id"]
-        video = update.message.video.file_id
-        media = InputMediaVideo(
-            media=video,
-            caption="✅ Cover Added.",
-            supports_streaming=True,
-            thumbnail=cover
-        )
-        
-        await context.bot.edit_message_media(
-            chat_id=update.effective_chat.id,
-            message_id=msg.message_id,
-            media=media
-        )
+        await context.bot.edit_message_media(chat_id=update.effective_chat.id, message_id=msg.message_id, media=media)
     except Exception as e:
-        logger.error(f"Error adding cover: {e}")
-        await update.message.reply_text(
-            f"❌ Failed to send video with cover:\n{str(e)[:100]}"
-        )
-
-async def error_handler(update, context):
-    """Log the error and send a telegram message to notify the developer."""
-    logger.error(msg="Exception while handling an update:", exc_info=context.error)
-
-
+        await update.message.reply_text(f"❌ Failed to send video with cover:\n{e}")
+        
 def perform_update(repo: str, branch: str) -> bool:
     """If UPSTREAM_REPO is set, attempt to fetch and reset local code to that branch."""
     if not repo:
