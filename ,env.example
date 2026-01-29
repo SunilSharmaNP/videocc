@@ -1,1 +1,21 @@
+# Required: Telegram bot token from @BotFather
 TELEGRAM_BOT_TOKEN=your_token_here
+
+# (Optional) Admin and owner configuration
+# OWNER_ID: single numeric Telegram user id (primary owner)
+# ADMIN_IDS: comma-separated numeric user ids that can run admin commands
+OWNER_ID=
+ADMIN_IDS=
+
+# (Optional) Upstream repository for auto-update feature
+# Example: https://github.com/username/repo.git
+UPSTREAM_REPO=
+# Branch name to track in the upstream repo
+UPSTREAM_BRANCH=main
+
+# (Optional) MongoDB connection string to read config from DB
+# If provided, the bot will attempt to load UPSTREAM_REPO/UPSTREAM_BRANCH and ADMIN_IDS from DB
+DATABASE_URL=
+
+# (Optional) If true, the bot may attempt to upgrade installed Python packages at startup
+UPGRADE_PACKAGES=False
