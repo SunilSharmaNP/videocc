@@ -1,8 +1,21 @@
 import os
+from dotenv import load_dotenv
 from telegram import InputMediaVideo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
-TOKEN = ""
+# load .env and config.env (config_updater may also load config.env)
+load_dotenv()
+try:
+    # attempt to update code from upstream if configured (safe no-op if none)
+    from config_updater import maybe_update_at_startup
+
+    maybe_update_at_startup()
+except Exception:
+    # fail quietly; keep existing behavior
+    pass
+
+# Read token from environment (keep rest of bot code unchanged)
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 app = Application.builder().token(TOKEN).build()
 
 user_data = {}
