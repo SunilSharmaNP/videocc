@@ -197,8 +197,6 @@ def main():
     app.add_handler(MessageHandler(filters.VIDEO & filters.ChatType.PRIVATE, video_handler))
     app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, photo_handler))
     
-    # Add error handler
-    app.add_error_handler(error_handler)
 
     # Add admin-only restart command
     app.add_handler(CommandHandler("restart", restart_command))
