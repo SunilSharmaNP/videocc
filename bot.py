@@ -135,39 +135,53 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not query or not query.data:
         return
 
-    if query.data == "check_fsub":
+    if query.data != "check_fsub":
+        return
 
-        allowed = await check_force_sub(update, context)
-        if not allowed:
-            return
+    # 🔥 VERY IMPORTANT: ACK CALLBACK
+    await query.answer("Checking access...")
 
-        # ✅ VERY IMPORTANT: answer callback
+    allowed = await check_force_sub(update, context)
+    if not allowed:
+        return
+
+    text = (
+        "✅ <b>Access Verified</b>\n\n"
+        "You have successfully joined the channel.\n\n"
+        "👉 Now send <b>/start</b> command and use me."
+    )
+
+    try:
+        msg = query.message
+
+        # 🖼 PHOTO MESSAGE
+        if msg.photo:
+            await msg.edit_caption(
+                caption=text,
+                parse_mode="HTML",
+                reply_markup=None
+            )
+
+        # 📝 TEXT MESSAGE
+        else:
+            await msg.edit_text(
+                text=text,
+                parse_mode="HTML",
+                reply_markup=None
+            )
+
+    except BadRequest:
+        # 🔁 HARD FALLBACK (Telegram-safe)
         try:
-            await query.answer("✅ Access Verified!", show_alert=False)
+            await msg.delete()
         except:
             pass
 
-        text = (
-            "✅ <b>Access Verified</b>\n\n"
-            "You have successfully joined the channel.\n\n"
-            "👉 Now send <b>/start</b> command and use me."
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=text,
+            parse_mode="HTML"
         )
-
-        try:
-            # 🖼 If original message was PHOTO
-            if query.message.photo:
-                await query.message.edit_caption(
-                    caption=text,
-                    parse_mode="HTML"
-                )
-            else:
-                # 📝 If original message was TEXT
-                await query.message.edit_text(
-                    text,
-                    parse_mode="HTML"
-                )
-        except BadRequest as e:
-            logger.error(f"Callback edit failed: {e}")
 
 
 """---------------------- Menus--------------------- """
