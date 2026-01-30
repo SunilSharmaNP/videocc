@@ -3,6 +3,19 @@ from telegram import InputMediaVideo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from config import config
 
+# Enhanced logging setup
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Initialize bot
+app = Client(
+    "Cover_Chnager_Bot",
+    TOKEN=config.BOT_TOKEN,
+)
+
 TOKEN = ""
 app = Application.builder().token(TOKEN).build()
 
