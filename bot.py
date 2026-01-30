@@ -136,11 +136,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if query.data == "check_fsub":
+
         allowed = await check_force_sub(update, context)
         if not allowed:
             return
 
-        # ✅ Always answer callback (important)
+        # ✅ VERY IMPORTANT: answer callback
         try:
             await query.answer("✅ Access Verified!", show_alert=False)
         except:
@@ -149,11 +150,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = (
             "✅ <b>Access Verified</b>\n\n"
             "You have successfully joined the channel.\n\n"
-            "👉 Send <b>/start</b> command and use me."
+            "👉 Now send <b>/start</b> command and use me."
         )
 
         try:
-            # 🖼 If original message was a PHOTO
+            # 🖼 If original message was PHOTO
             if query.message.photo:
                 await query.message.edit_caption(
                     caption=text,
@@ -166,8 +167,9 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="HTML"
                 )
         except BadRequest as e:
-            logger.error(f"Verify edit failed: {e}")
-        
+            logger.error(f"Callback edit failed: {e}")
+
+
 """---------------------- Menus--------------------- """
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
