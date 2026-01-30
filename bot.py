@@ -140,19 +140,33 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not allowed:
             return
 
-        # ✅ Safe reply for callback context
+        # ✅ Always answer callback (important)
         try:
-            await query.message.edit_text(
-                "✅ <b>Access Verified!</b>\n\n"
-                "You can now use the bot.\n\n"
-                "📸 Send a photo to set thumbnail\n"
-                "🎥 Send a video to apply cover\n\n"
-                "Use /help to see all commands.",
-                parse_mode="HTML"
-            )
-        except BadRequest:
+            await query.answer("✅ Access Verified!", show_alert=False)
+        except:
             pass
 
+        text = (
+            "✅ <b>Access Verified</b>\n\n"
+            "You have successfully joined the channel.\n\n"
+            "👉 Send <b>/start</b> command and use me."
+        )
+
+        try:
+            # 🖼 If original message was a PHOTO
+            if query.message.photo:
+                await query.message.edit_caption(
+                    caption=text,
+                    parse_mode="HTML"
+                )
+            else:
+                # 📝 If original message was TEXT
+                await query.message.edit_text(
+                    text,
+                    parse_mode="HTML"
+                )
+        except BadRequest as e:
+            logger.error(f"Verify edit failed: {e}")
         
 """---------------------- Menus--------------------- """
 
