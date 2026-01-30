@@ -140,28 +140,20 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not allowed:
             return
 
+        # ✅ Safe reply for callback context
         try:
-            if query.message.photo:
-                await query.message.edit_caption(
-                    caption=
-                    "✅ <b>Access Verified!</b>\n\n"
-                    "You can now use the bot.\n\n"
-                    "📸 Send a photo to set thumbnail\n"
-                    "🎥 Send a video to apply cover",
-                    parse_mode="HTML"
-                )
-            else:
-                await query.message.edit_text(
-                    "✅ <b>Access Verified!</b>\n\n"
-                    "You can now use the bot.\n\n"
-                    "📸 Send a photo to set thumbnail\n"
-                    "🎥 Send a video to apply cover",
-                    parse_mode="HTML"
-                )
+            await query.message.edit_text(
+                "✅ <b>Access Verified!</b>\n\n"
+                "You can now use the bot.\n\n"
+                "📸 Send a photo to set thumbnail\n"
+                "🎥 Send a video to apply cover\n\n"
+                "Use /help to see all commands.",
+                parse_mode="HTML"
+            )
         except BadRequest:
             pass
 
-
+        
 """---------------------- Menus--------------------- """
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
