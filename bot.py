@@ -69,6 +69,7 @@ async def send_or_edit(update: Update, text, reply_markup=None, force_banner=Non
 """------------------FORCE-SUB CHECK-----------------"""
 
 async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Check if user has joined the required channel"""
     if update.effective_user.id == OWNER_ID:
         return True
     if not FORCE_SUB_CHANNEL_ID:
@@ -77,89 +78,105 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     user_id = update.effective_user.id
 
     try:
+        chat_id = int(FORCE_SUB_CHANNEL_ID) if FORCE_SUB_CHANNEL_ID.isdigit() else FORCE_SUB_CHANNEL_ID
+        
+        # Check user's membership status
         try:
-            chat_id = int(FORCE_SUB_CHANNEL_ID)
-        except ValueError:
-            chat_id = FORCE_SUB_CHANNEL_ID
-
-        member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
-
-        if member.status in ("left", "kicked", "restricted"):
-            invite_link = None
-
+            member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+            if member.status in ("left", "kicked", "restricted", None):
+                raise Exception("User not a member")
+        except Exception as e:
+            # User is not a member or bot can't check
+            logger.info(f"User {user_id} is not a member of channel {chat_id}: {e}")
+            
+            # Get invite link
             try:
-                link_obj = await context.bot.create_chat_invite_link(chat_id)
+                link_obj = await context.bot.create_chat_invite_link(chat_id=chat_id, member_limit=1)
                 invite_link = link_obj.invite_link
-            except BadRequest:
-                chat = await context.bot.get_chat(chat_id)
-                invite_link = chat.invite_link or (
-                    f"https://t.me/{chat.username}" if chat.username else None
-                )
+            except Exception as e:
+                logger.error(f"Error creating invite link: {e}")
+                try:
+                    chat = await context.bot.get_chat(chat_id)
+                    invite_link = chat.invite_link if chat.invite_link else f"https://t.me/{chat.username}"
+                except Exception as e:
+                    logger.error(f"Error getting chat info: {e}")
+                    return True  # Fail-safe
 
-            if not invite_link:
-                return True  # fail-safe
-
-            if update.callback_query:
-                await update.callback_query.answer(
-                    "❌ You must join the channel first!",
-                    show_alert=True,
-                )
-
+            # Show force-sub message
             text = (
                 "🔒 <b>Access Restricted</b>\n\n"
                 "To use this bot, you must join our updates channel.\n\n"
                 "👇 Join first, then click Verify 👇"
             )
 
-            kb = InlineKeyboardMarkup(
-                [
-                    [InlineKeyboardButton("📢 Join Updates Channel", url=invite_link)],
-                    [InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub")],
-                ]
-            )
+            kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("📢 Join Updates Channel", url=invite_link)],
+                [InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub")]
+            ])
 
             await send_or_edit(update, text, kb, FORCE_SUB_BANNER_URL)
             return False
 
-        if update.callback_query:
-            await update.callback_query.answer("✅ Access verified!", show_alert=False)
-
+        # User is a member
         return True
 
     except Exception as e:
         logger.error(f"❌ Force-Sub Error: {e}")
-        return True
+        return True  # Allow access on error
+
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle callback query for force-sub verification"""
     query = update.callback_query
     if not query or query.data != "check_fsub":
         return
 
-    # ACK callback (must)
+    # Answer the callback immediately
     await query.answer()
 
-    allowed = await check_force_sub(update, context)
-    if not allowed:
+    user_id = query.from_user.id
+    
+    # Check membership
+    if not FORCE_SUB_CHANNEL_ID:
+        await query.message.delete()
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text="✅ <b>Access Granted</b>\n\nYou can now use the bot.",
+            parse_mode="HTML"
+        )
         return
 
-    text = (
-        "✅ <b>Access Verified</b>\n\n"
-        "You have successfully joined the channel.\n\n"
-        "👉 Now send <b>/start</b> command and use me."
-    )
-
     try:
-        # 🔥 ALWAYS DELETE OLD FORCE-SUB MESSAGE
-        await query.message.delete()
-    except:
-        pass
+        chat_id = int(FORCE_SUB_CHANNEL_ID) if FORCE_SUB_CHANNEL_ID.isdigit() else FORCE_SUB_CHANNEL_ID
+        
+        try:
+            member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+            if member.status in ("left", "kicked", "restricted", None):
+                raise Exception("Still not a member")
+        except Exception as e:
+            logger.info(f"User {user_id} still not a member: {e}")
+            await query.answer("❌ You haven't joined the channel yet!", show_alert=True)
+            return
 
-    # ✅ SEND FRESH MESSAGE (NO EDIT = NO SILENT FAIL)
-    await context.bot.send_message(
-        chat_id=query.message.chat_id,
-        text=text,
-        parse_mode="HTML"
-    )
+        # User has joined - delete old message and send success
+        try:
+            await query.message.delete()
+        except Exception as e:
+            logger.error(f"Error deleting message: {e}")
+
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=(
+                "✅ <b>Access Verified</b>\n\n"
+                "You have successfully joined the channel.\n\n"
+                "You can now use the bot commands."
+            ),
+            parse_mode="HTML"
+        )
+
+    except Exception as e:
+        logger.error(f"❌ Callback Error: {e}")
+        await query.answer("❌ An error occurred. Please try again.", show_alert=True)
 
 
 """---------------------- Menus--------------------- """
