@@ -9,6 +9,9 @@ from telegram.ext import (
     ContextTypes,
 )
 from config import config
+import sys
+from updater import update_from_upstream
+
 
 # Logging
 logging.basicConfig(
@@ -21,6 +24,8 @@ TOKEN = getattr(config, "BOT_TOKEN", None) or os.environ.get("BOT_TOKEN")
 if not TOKEN:
     logger.error("BOT_TOKEN not set in config or environment (config.env).")
     raise SystemExit("BOT_TOKEN not set")
+
+OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 
 # In-memory per-user thumbnail storage (keeps only file_ids)
 user_data = {}
@@ -53,6 +58,24 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Failed to send video with cover:\n{e}")
 
 
+async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+
+    if user_id != OWNER_ID:
+        return await update.message.reply_text("❌ You are not authorized.")
+
+    msg = await update.message.reply_text("🔄 Updating from upstream...")
+
+    success = update_from_upstream()
+
+    if not success:
+        return await msg.edit_text("❌ Update failed. Check logs.")
+
+    await msg.edit_text("✅ Updated successfully.\n♻️ Restarting bot...")
+    os.execv(sys.executable, [sys.executable] + sys.argv)
+
+
+
 def main() -> None:
     app = Application.builder().token(TOKEN).build()
 
@@ -62,6 +85,9 @@ def main() -> None:
     # Photo and video handlers (private chats only via filters)
     app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, photo_handler))
     app.add_handler(MessageHandler(filters.VIDEO & filters.ChatType.PRIVATE, video_handler))
+
+    app.add_handler(CommandHandler("restart", restart, filters=filters.ChatType.PRIVATE))
+
 
     logger.info("Bot starting (polling)")
     app.run_polling()
