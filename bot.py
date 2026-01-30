@@ -132,14 +132,11 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    if not query or not query.data:
+    if not query or query.data != "check_fsub":
         return
 
-    if query.data != "check_fsub":
-        return
-
-    # 🔥 VERY IMPORTANT: ACK CALLBACK
-    await query.answer("Checking access...")
+    # ACK callback (must)
+    await query.answer()
 
     allowed = await check_force_sub(update, context)
     if not allowed:
@@ -152,36 +149,17 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     try:
-        msg = query.message
+        # 🔥 ALWAYS DELETE OLD FORCE-SUB MESSAGE
+        await query.message.delete()
+    except:
+        pass
 
-        # 🖼 PHOTO MESSAGE
-        if msg.photo:
-            await msg.edit_caption(
-                caption=text,
-                parse_mode="HTML",
-                reply_markup=None
-            )
-
-        # 📝 TEXT MESSAGE
-        else:
-            await msg.edit_text(
-                text=text,
-                parse_mode="HTML",
-                reply_markup=None
-            )
-
-    except BadRequest:
-        # 🔁 HARD FALLBACK (Telegram-safe)
-        try:
-            await msg.delete()
-        except:
-            pass
-
-        await context.bot.send_message(
-            chat_id=query.message.chat_id,
-            text=text,
-            parse_mode="HTML"
-        )
+    # ✅ SEND FRESH MESSAGE (NO EDIT = NO SILENT FAIL)
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text=text,
+        parse_mode="HTML"
+    )
 
 
 """---------------------- Menus--------------------- """
@@ -307,9 +285,7 @@ def main() -> None:
     app.add_handler(CommandHandler("settings", settings, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("restart", restart, filters=filters.ChatType.PRIVATE))
     
-    app.add_handler(CallbackQueryHandler(callback_handler))
-
-
+    app.add_handler(CallbackQueryHandler(callback_handler, pattern="^check_fsub$"))
 
 
 
