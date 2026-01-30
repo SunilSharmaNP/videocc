@@ -1,6 +1,7 @@
 import os
 from telegram import InputMediaVideo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from config import config
 
 TOKEN = ""
 app = Application.builder().token(TOKEN).build()
