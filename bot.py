@@ -16,6 +16,7 @@ from telegram import (
     InlineKeyboardMarkup,
 )
 from telegram.error import BadRequest
+from telegram.ext import CallbackQueryHandler
 
 # Logging
 logging.basicConfig(
@@ -69,7 +70,7 @@ async def send_or_edit(update: Update, text, reply_markup=None, force_banner=Non
 
 async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     if update.effective_user.id == OWNER_ID:
-    return True
+        return True
     if not FORCE_SUB_CHANNEL_ID:
         return True
 
@@ -258,22 +259,6 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 """-----------CALLBAck Hnadlers--------"""
-async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    if not query or not query.data:
-        return
-    data = query.data
-    try:
-        if data == "check_fsub":
-            await start(update, context)
-
-    except Exception as e:
-        logger.error(f"❌ Callback handler error: {e}", exc_info=True)
-        try:
-            await query.answer("❌ Something Went Wrong.\nPlease Try Again.",
-                               show_alert=True)
-        except:
-            pass
 
 
 def main() -> None:
@@ -292,7 +277,6 @@ def main() -> None:
     app.add_handler(CommandHandler("settings", settings, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("restart", restart, filters=filters.ChatType.PRIVATE))
     
-    from telegram.ext import CallbackQueryHandler
     app.add_handler(CallbackQueryHandler(callback_handler))
 
 
