@@ -68,6 +68,8 @@ async def send_or_edit(update: Update, text, reply_markup=None, force_banner=Non
 """------------------FORCE-SUB CHECK-----------------"""
 
 async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    if update.effective_user.id == OWNER_ID:
+    return True
     if not FORCE_SUB_CHANNEL_ID:
         return True
 
@@ -127,8 +129,29 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         logger.error(f"❌ Force-Sub Error: {e}")
         return True
 
-async def force_sub_verify(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await check_force_sub(update, context)
+async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query or not query.data:
+        return
+
+    if query.data == "check_fsub":
+        allowed = await check_force_sub(update, context)
+
+        if not allowed:
+            return
+
+        # ✅ Joined successfully → show start menu
+        try:
+            await query.message.edit_text(
+                "✅ <b>Access Verified!</b>\n\n"
+                "You can now use the bot.\n\n"
+                "📸 Send a photo to set thumbnail\n"
+                "🎥 Send a video to apply cover",
+                parse_mode="HTML"
+            )
+        except BadRequest:
+            pass
+
 
 """---------------------- Menus--------------------- """
 
@@ -268,11 +291,11 @@ def main() -> None:
     app.add_handler(CommandHandler("about", about, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("settings", settings, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("restart", restart, filters=filters.ChatType.PRIVATE))
+    
+    from telegram.ext import CallbackQueryHandler
     app.add_handler(CallbackQueryHandler(callback_handler))
 
-    from telegram.ext import CallbackQueryHandler
 
-    app.add_handler(CallbackQueryHandler(force_sub_verify, pattern="^check_fsub$"))
 
 
 
