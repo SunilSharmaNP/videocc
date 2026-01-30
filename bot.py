@@ -1,39 +1,43 @@
 import os
-from telegram import InputMediaVideo
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+import logging
+from telegram import InputMediaVideo, Update
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    filters,
+    ContextTypes,
+)
 from config import config
 
-# Enhanced logging setup
+# Logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-# Initialize bot
-app = Client(
-    "Cover_Chnager_Bot",
-    TOKEN=config.BOT_TOKEN,
-)
+# Token from config or environment
+TOKEN = getattr(config, "BOT_TOKEN", None) or os.environ.get("BOT_TOKEN")
+if not TOKEN:
+    logger.error("BOT_TOKEN not set in config or environment (config.env).")
+    raise SystemExit("BOT_TOKEN not set")
 
-TOKEN = ""
-app = Application.builder().token(TOKEN).build()
-
+# In-memory per-user thumbnail storage (keeps only file_ids)
 user_data = {}
 
-async def remover(update, context):
+async def remover(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     if user_id in user_data:
         user_data.pop(user_id, None)
         return await update.message.reply_text("✅ Thumbnail Removed.", reply_to_message_id=update.message.message_id)
     await update.message.reply_text("⚠️ First Add A Thumbnail.", reply_to_message_id=update.message.message_id)
 
-async def photo_handler(update, context):
+async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_data[user_id] = {"photo_id": update.message.photo[-1].file_id}
     await update.message.reply_text("✅ New Thumbnail Saved.", reply_to_message_id=update.message.message_id)
 
-async def video_handler(update, context):
+async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     if user_id not in user_data or "photo_id" not in user_data[user_id]:
         return await update.message.reply_text("❌ Send A Photo First.", reply_to_message_id=update.message.message_id)
@@ -47,8 +51,21 @@ async def video_handler(update, context):
         await context.bot.edit_message_media(chat_id=update.effective_chat.id, message_id=msg.message_id, media=media)
     except Exception as e:
         await update.message.reply_text(f"❌ Failed to send video with cover:\n{e}")
-        
-app.add_handler(CommandHandler("remove", remover, filters=filters.ChatType.PRIVATE))
-app.add_handler(MessageHandler(filters.VIDEO & filters.ChatType.PRIVATE, video_handler))
-app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, photo_handler))
-app.run_polling()
+
+
+def main() -> None:
+    app = Application.builder().token(TOKEN).build()
+
+    # Command to remove stored thumbnail
+    app.add_handler(CommandHandler("remove", remover, filters=filters.ChatType.PRIVATE))
+
+    # Photo and video handlers (private chats only via filters)
+    app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, photo_handler))
+    app.add_handler(MessageHandler(filters.VIDEO & filters.ChatType.PRIVATE, video_handler))
+
+    logger.info("Bot starting (polling)")
+    app.run_polling()
+
+
+if __name__ == "__main__":
+    main()
