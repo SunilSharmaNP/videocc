@@ -30,6 +30,53 @@ OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 # In-memory per-user thumbnail storage (keeps only file_ids)
 user_data = {}
 
+"""---------------------- Menus--------------------- """
+"""---------------------- Menus--------------------- """
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "👋 <b>Welcome to Instant Cover Bot</b>\n\n"
+        "📸 Send a <b>photo</b> to set thumbnail\n"
+        "🎥 Send a <b>video</b> to get it with cover\n\n"
+        "🧩 Commands:\n"
+        "/help – How to use bot\n"
+        "/settings – Bot settings\n"
+        "/about – About this bot",
+        parse_mode="HTML"
+    )
+async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "ℹ️ <b>Help Menu</b>\n\n"
+        "1️⃣ Send a <b>photo</b> → thumbnail saved\n"
+        "2️⃣ Send a <b>video</b> → cover applied\n\n"
+        "<b>Commands:</b>\n"
+        "/remove – Remove saved thumbnail\n"
+        "/settings – View bot settings\n"
+        "/about – About this bot",
+        parse_mode="HTML"
+    )
+async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🤖 <b>Instant Video Cover Bot</b>\n\n"
+        "✨ Features:\n"
+        "• Instant thumbnail apply\n"
+        "• One thumbnail per user\n"
+        "• Fast & simple\n\n"
+        "🛠 Powered by python-telegram-bot",
+        parse_mode="HTML"
+    )
+async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+
+    thumb_status = "✅ Set" if user_id in user_data else "❌ Not Set"
+
+    await update.message.reply_text(
+        "⚙️ <b>Settings</b>\n\n"
+        f"🖼 Thumbnail: <b>{thumb_status}</b>\n\n"
+        "Use /remove to delete thumbnail",
+        parse_mode="HTML"
+    )
+
+
 async def remover(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     if user_id in user_data:
