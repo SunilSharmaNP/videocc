@@ -11,7 +11,11 @@ from telegram.ext import (
 from config import config
 import sys
 from updater import update_from_upstream
-
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
+from telegram.error import BadRequest
 
 # Logging
 logging.basicConfig(
@@ -26,13 +30,111 @@ if not TOKEN:
     raise SystemExit("BOT_TOKEN not set")
 
 OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
+FORCE_SUB_CHANNEL_ID = os.environ.get("FORCE_SUB_CHANNEL_ID")
+FORCE_SUB_BANNER_URL = os.environ.get("FORCE_SUB_BANNER_URL")
+
 
 # In-memory per-user thumbnail storage (keeps only file_ids)
 user_data = {}
 
+"""--------------------HELPER FUNCTIONS--------------------"""
+async def send_or_edit(update: Update, text, reply_markup=None, force_banner=None):
+    if update.callback_query:
+        try:
+            await update.callback_query.message.edit_text(
+                text,
+                reply_markup=reply_markup,
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+            )
+        except BadRequest:
+            pass
+    else:
+        if force_banner:
+            await update.message.reply_photo(
+                photo=force_banner,
+                caption=text,
+                reply_markup=reply_markup,
+                parse_mode="HTML",
+            )
+        else:
+            await update.message.reply_text(
+                text,
+                reply_markup=reply_markup,
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+            )
+
+"""------------------FORCE-SUB CHECK-----------------"""
+
+async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    if not FORCE_SUB_CHANNEL_ID:
+        return True
+
+    user_id = update.effective_user.id
+
+    try:
+        try:
+            chat_id = int(FORCE_SUB_CHANNEL_ID)
+        except ValueError:
+            chat_id = FORCE_SUB_CHANNEL_ID
+
+        member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+
+        if member.status in ("left", "kicked", "restricted"):
+            invite_link = None
+
+            try:
+                link_obj = await context.bot.create_chat_invite_link(chat_id)
+                invite_link = link_obj.invite_link
+            except BadRequest:
+                chat = await context.bot.get_chat(chat_id)
+                invite_link = chat.invite_link or (
+                    f"https://t.me/{chat.username}" if chat.username else None
+                )
+
+            if not invite_link:
+                return True  # fail-safe
+
+            if update.callback_query:
+                await update.callback_query.answer(
+                    "❌ You must join the channel first!",
+                    show_alert=True,
+                )
+
+            text = (
+                "🔒 <b>Access Restricted</b>\n\n"
+                "To use this bot, you must join our updates channel.\n\n"
+                "👇 Join first, then click Verify 👇"
+            )
+
+            kb = InlineKeyboardMarkup(
+                [
+                    [InlineKeyboardButton("📢 Join Updates Channel", url=invite_link)],
+                    [InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub")],
+                ]
+            )
+
+            await send_or_edit(update, text, kb, FORCE_SUB_BANNER_URL)
+            return False
+
+        if update.callback_query:
+            await update.callback_query.answer("✅ Access verified!", show_alert=False)
+
+        return True
+
+    except Exception as e:
+        logger.error(f"❌ Force-Sub Error: {e}")
+        return True
+
+async def force_sub_verify(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await check_force_sub(update, context)
+
 """---------------------- Menus--------------------- """
-"""---------------------- Menus--------------------- """
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_force_sub(update, context):
+        return
     await update.message.reply_text(
         "👋 <b>Welcome to Instant Cover Bot</b>\n\n"
         "📸 Send a <b>photo</b> to set thumbnail\n"
@@ -44,6 +146,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_force_sub(update, context):
+        return
     await update.message.reply_text(
         "ℹ️ <b>Help Menu</b>\n\n"
         "1️⃣ Send a <b>photo</b> → thumbnail saved\n"
@@ -55,6 +159,8 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_force_sub(update, context):
+        return
     await update.message.reply_text(
         "🤖 <b>Instant Video Cover Bot</b>\n\n"
         "✨ Features:\n"
@@ -65,10 +171,10 @@ async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_force_sub(update, context):
+        return
     user_id = update.message.from_user.id
-
     thumb_status = "✅ Set" if user_id in user_data else "❌ Not Set"
-
     await update.message.reply_text(
         "⚙️ <b>Settings</b>\n\n"
         f"🖼 Thumbnail: <b>{thumb_status}</b>\n\n"
@@ -78,6 +184,8 @@ async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def remover(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_force_sub(update, context):
+        return
     user_id = update.message.from_user.id
     if user_id in user_data:
         user_data.pop(user_id, None)
@@ -85,11 +193,15 @@ async def remover(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("⚠️ First Add A Thumbnail.", reply_to_message_id=update.message.message_id)
 
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_force_sub(update, context):
+        return
     user_id = update.message.from_user.id
     user_data[user_id] = {"photo_id": update.message.photo[-1].file_id}
     await update.message.reply_text("✅ New Thumbnail Saved.", reply_to_message_id=update.message.message_id)
 
 async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_force_sub(update, context):
+        return
     user_id = update.message.from_user.id
     if user_id not in user_data or "photo_id" not in user_data[user_id]:
         return await update.message.reply_text("❌ Send A Photo First.", reply_to_message_id=update.message.message_id)
@@ -138,6 +250,11 @@ def main() -> None:
     app.add_handler(CommandHandler("about", about, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("settings", settings, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("restart", restart, filters=filters.ChatType.PRIVATE))
+
+    from telegram.ext import CallbackQueryHandler
+
+    app.add_handler(CallbackQueryHandler(force_sub_verify, pattern="^check_fsub$"))
+
 
 
     logger.info("Bot starting (polling)")
