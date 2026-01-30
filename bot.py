@@ -137,19 +137,27 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "check_fsub":
         allowed = await check_force_sub(update, context)
-
         if not allowed:
             return
 
-        # ✅ Joined successfully → show start menu
         try:
-            await query.message.edit_text(
-                "✅ <b>Access Verified!</b>\n\n"
-                "You can now use the bot.\n\n"
-                "📸 Send a photo to set thumbnail\n"
-                "🎥 Send a video to apply cover",
-                parse_mode="HTML"
-            )
+            if query.message.photo:
+                await query.message.edit_caption(
+                    caption=
+                    "✅ <b>Access Verified!</b>\n\n"
+                    "You can now use the bot.\n\n"
+                    "📸 Send a photo to set thumbnail\n"
+                    "🎥 Send a video to apply cover",
+                    parse_mode="HTML"
+                )
+            else:
+                await query.message.edit_text(
+                    "✅ <b>Access Verified!</b>\n\n"
+                    "You can now use the bot.\n\n"
+                    "📸 Send a photo to set thumbnail\n"
+                    "🎥 Send a video to apply cover",
+                    parse_mode="HTML"
+                )
         except BadRequest:
             pass
 
