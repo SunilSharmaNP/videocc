@@ -5,9 +5,11 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install minimal system deps
+# Install system dependencies (git REQUIRED for updater)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        git \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
@@ -17,7 +19,7 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Copy project
 COPY . /app
 
-# Use non-root user
+# Create non-root user
 RUN useradd -m botuser || true
 USER botuser
 
