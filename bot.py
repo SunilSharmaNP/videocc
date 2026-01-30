@@ -234,6 +234,24 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
+"""-----------CALLBAck Hnadlers--------"""
+async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query or not query.data:
+        return
+    data = query.data
+    try:
+        if data == "check_fsub":
+            await start(update, context)
+
+    except Exception as e:
+        logger.error(f"❌ Callback handler error: {e}", exc_info=True)
+        try:
+            await query.answer("❌ Something Went Wrong.\nPlease Try Again.",
+                               show_alert=True)
+        except:
+            pass
+
 
 def main() -> None:
     app = Application.builder().token(TOKEN).build()
@@ -250,6 +268,7 @@ def main() -> None:
     app.add_handler(CommandHandler("about", about, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("settings", settings, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("restart", restart, filters=filters.ChatType.PRIVATE))
+    app.add_handler(CallbackQueryHandler(callback_handler))
 
     from telegram.ext import CallbackQueryHandler
 
