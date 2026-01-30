@@ -22,4 +22,4 @@ RUN useradd -m botuser || true
 USER botuser
 
 # Default command
-CMD ["python", "main.py"]
+CMD ["python", "bot.py"]
