@@ -1,22 +1,19 @@
 import os
 import logging
-from telegram import InputMediaVideo, Update, InputFile
+import asyncio
+from telegram import InputMediaVideo, Update, InputFile, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
     filters,
     ContextTypes,
+    CallbackQueryHandler,
 )
 from config import config
 import sys
 from updater import update_from_upstream
-from telegram import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-)
 from telegram.error import BadRequest
-from telegram.ext import CallbackQueryHandler
 
 # Logging
 logging.basicConfig(
@@ -164,7 +161,13 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not query or query.data != "check_fsub":
         return
 
-    # Defer answering until we know the result so user sees a clear message
+    # Acknowledge callback immediately so user sees the button press
+    try:
+        await query.answer()
+    except Exception:
+        pass
+
+    # Defer further responses until we know the result so user sees a clear message
 
     user_id = query.from_user.id
     
