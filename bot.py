@@ -269,12 +269,17 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "check_fsub":
         logger.info(f"🔍 Processing verify button for user {user_id}")
         
+        # Answer callback IMMEDIATELY to prevent timeout
+        try:
+            await query.answer()
+        except Exception as e:
+            logger.debug(f"Early callback answer error (okay): {e}")
+        
         try:
             chat_id = int(FORCE_SUB_CHANNEL_ID) if str(FORCE_SUB_CHANNEL_ID).isdigit() else FORCE_SUB_CHANNEL_ID
         except Exception:
             logger.error(f"Invalid FORCE_SUB_CHANNEL_ID: {FORCE_SUB_CHANNEL_ID}")
             verified_users.add(user_id)
-            await query.answer()
             await start(update, context)
             return
 
@@ -295,20 +300,29 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if member.status in allowed_statuses:
                 # User joined! Verify instantly and show home menu
                 verified_users.add(user_id)
-                await query.answer("✅ Verified! Opening home menu...", show_alert=False)
                 logger.info(f"✅ User {user_id} verified, opening home menu instantly")
                 await start(update, context)
                 return
             else:
-                # User not member - show alert
-                await query.answer("❌ You haven't joined the channel yet!\n\nClick 'Join Updates Channel' button first, then tap Verify.", show_alert=True)
+                # User not member - send error message
+                msg = query.message
+                error_text = (
+                    "❌ <b>You haven't joined yet!</b>\n\n"
+                    "Join our channel using the button below, then click Verify again."
+                )
+                try:
+                    if getattr(msg, "photo", None):
+                        await msg.edit_caption(error_text, parse_mode="HTML")
+                    else:
+                        await msg.edit_text(error_text, parse_mode="HTML")
+                except Exception:
+                    pass
                 logger.warning(f"❌ User {user_id} not member. Status: {member.status}")
                 return
         except Exception as e:
             logger.error(f"❌ Verify button check error: {e}", exc_info=True)
             # Fail open
             verified_users.add(user_id)
-            await query.answer("✅ Access granted!", show_alert=False)
             await start(update, context)
             return
     
