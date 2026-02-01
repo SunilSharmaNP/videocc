@@ -1,21 +1,46 @@
+# ═══════════════════════════════════════════════════════════
+# Video Cover Bot - Environment Configuration
+# ═══════════════════════════════════════════════════════════
+
+# ─── TELEGRAM BOT CONFIGURATION ───
 # Required: Telegram bot token from @BotFather
-TELEGRAM_BOT_TOKEN=your_token_here
+BOT_TOKEN=your_bot_token_here
 
-# (Optional) Admin and owner configuration
-# OWNER_ID: single numeric Telegram user id (primary owner)
-# ADMIN_IDS: comma-separated numeric user ids that can run admin commands
-OWNER_ID=
-ADMIN_IDS=
+# Owner/Admin user ID (your Telegram user ID)
+OWNER_ID=your_telegram_user_id
 
-# (Optional) Upstream repository for auto-update feature
-# Example: https://github.com/username/repo.git
-UPSTREAM_REPO=
-# Branch name to track in the upstream repo
+# Owner's username (optional, for display purposes)
+OWNER_USERNAME=your_username
+
+# ─── FORCE SUBSCRIBE CHANNEL ───
+# Channel ID to force users to join (with - prefix)
+FORCE_SUB_CHANNEL_ID=-1002659719637
+
+# Banner image URL for force subscribe screen
+FORCE_SUB_BANNER_URL=https://example.com/banner.jpg
+
+# ─── MONGODB DATABASE ───
+# MongoDB connection URI
+MONGODB_URI=mongodb://localhost:27017
+
+# MongoDB database name
+MONGODB_DATABASE=video_cover_bot
+
+# ─── LOGGING ───
+# Channel ID where all user actions are logged
+LOG_CHANNEL_ID=-1002659719637
+
+# ─── REPOSITORY (Optional - for auto-updates) ───
+# GitHub repository URL
+UPSTREAM_REPO=https://github.com/your_username/your_repo
+
+# Repository branch to pull from
 UPSTREAM_BRANCH=main
 
-# (Optional) MongoDB connection string to read config from DB
-# If provided, the bot will attempt to load UPSTREAM_REPO/UPSTREAM_BRANCH and ADMIN_IDS from DB
-DATABASE_URL=
+# ═══════════════════════════════════════════════════════════
+# SETUP INSTRUCTIONS:
+# 1. Copy this file to config.env
+# 2. Fill in all the values above
+# 3. Run: python bot.py
+# ═══════════════════════════════════════════════════════════
 
-# (Optional) If true, the bot may attempt to upgrade installed Python packages at startup
-UPGRADE_PACKAGES=False
