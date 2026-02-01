@@ -586,7 +586,13 @@ def main() -> None:
 
     logger.info("✅ All handlers registered")
     logger.info("Bot starting (polling)")
-    app.run_polling()
+    app.run_polling(
+        allowed_updates=[
+            "message",
+            "callback_query",
+        ],
+        close_loop=False,
+    )
 
 
 if __name__ == "__main__":
