@@ -952,24 +952,23 @@ def main() -> None:
 
     app.add_error_handler(error_handler)
 
-    # Command to remove stored thumbnail
+    # Command handlers (MUST be registered FIRST before text handler)
+    app.add_handler(CommandHandler("start", start, filters=filters.ChatType.PRIVATE))
+    app.add_handler(CommandHandler("help", help_cmd, filters=filters.ChatType.PRIVATE))
+    app.add_handler(CommandHandler("about", about, filters=filters.ChatType.PRIVATE))
+    app.add_handler(CommandHandler("settings", settings, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("remove", remover, filters=filters.ChatType.PRIVATE))
+    app.add_handler(CommandHandler("restart", restart, filters=filters.ChatType.PRIVATE))
 
     # Photo and video handlers (private chats only via filters)
     app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, photo_handler))
     app.add_handler(MessageHandler(filters.VIDEO & filters.ChatType.PRIVATE, video_handler))
     
-    # Text handler for dump channel ID capture
-    app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, text_handler))
-
-    app.add_handler(CommandHandler("start", start, filters=filters.ChatType.PRIVATE))
-    app.add_handler(CommandHandler("help", help_cmd, filters=filters.ChatType.PRIVATE))
-    app.add_handler(CommandHandler("about", about, filters=filters.ChatType.PRIVATE))
-    app.add_handler(CommandHandler("settings", settings, filters=filters.ChatType.PRIVATE))
-    app.add_handler(CommandHandler("restart", restart, filters=filters.ChatType.PRIVATE))
+    # Text handler for dump channel ID capture (MUST be LAST - only non-command text)
+    # Add filter to exclude commands (messages starting with /)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, text_handler))
     
-    # Register a general callback handler (handles verify, close, contact, etc.)
-    # IMPORTANT: This should be registered LAST before error handler
+    # Register callback handler (handles all callbacks)
     app.add_handler(CallbackQueryHandler(callback_handler))
 
     logger.info("✅ All handlers registered")
