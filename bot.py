@@ -160,8 +160,18 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Check if user is already a member
         try:
             member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
-            # Check status: "member", "administrator", "creator", or "restricted"
-            if member.status in (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR):
+            # Check status - use both OWNER and CREATOR for compatibility
+            allowed_statuses = (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR)
+            # Try to add OWNER or CREATOR if they exist
+            try:
+                allowed_statuses = allowed_statuses + (ChatMemberStatus.OWNER,)
+            except AttributeError:
+                try:
+                    allowed_statuses = allowed_statuses + (ChatMemberStatus.CREATOR,)
+                except AttributeError:
+                    pass
+            
+            if member.status in allowed_statuses:
                 verified_users.add(user_id)
                 return True
             # User is restricted, left, or kicked
@@ -242,48 +252,47 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error("❌ Query data is None!")
         return
 
-    # Acknowledge callback immediately with proper arguments
-    try:
-        await query.answer(text="Processing...", show_alert=False)
-        logger.info(f"✅ Query acknowledged: {query.data}")
-    except Exception as e:
-        logger.error(f"❌ Failed to answer query: {e}")
-        pass
-
-    logger.info(f"📨 Received callback: {query.data} from {query.from_user.id}")
-
     user_id = query.from_user.id
     
     # Handle explicit verify button click
     if query.data == "check_fsub":
         logger.info(f"🔍 Processing verify button for user {user_id}")
-        try:
-            await query.answer("🔍 Checking membership...", show_alert=False)
-        except Exception as e:
-            logger.error(f"Query answer error: {e}")
-
+        
         try:
             chat_id = int(FORCE_SUB_CHANNEL_ID) if str(FORCE_SUB_CHANNEL_ID).isdigit() else FORCE_SUB_CHANNEL_ID
         except Exception:
             logger.error(f"Invalid FORCE_SUB_CHANNEL_ID: {FORCE_SUB_CHANNEL_ID}")
             verified_users.add(user_id)
+            await query.answer()
             await start(update, context)
             return
 
         try:
             member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
             logger.info(f"✅ Member status: {member.status}")
-            # Check if user is member, admin, or creator
-            if member.status in (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR):
+            
+            # Check if user is member, admin, or owner
+            # Use both OWNER and CREATOR for compatibility
+            allowed_statuses = (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR)
+            # Try to add OWNER or CREATOR if they exist
+            try:
+                allowed_statuses = allowed_statuses + (ChatMemberStatus.OWNER,)
+            except AttributeError:
+                try:
+                    allowed_statuses = allowed_statuses + (ChatMemberStatus.CREATOR,)
+                except AttributeError:
+                    pass
+            
+            if member.status in allowed_statuses:
                 verified_users.add(user_id)
-                await query.answer("✅ Membership verified! Opening home menu...", show_alert=False)
+                await query.answer("✅ Membership verified!", show_alert=False)
                 logger.info(f"✅ Verified user {user_id}, opening home menu")
                 # Show home menu directly
                 await start(update, context)
                 return
             else:
-                await query.answer("❌ Please join the channel first using the 'Join Updates Channel' button, then tap Verify again.", show_alert=True)
-                logger.warning(f"❌ User {user_id} not member yet")
+                await query.answer("❌ Please join the channel first, then tap Verify again.", show_alert=True)
+                logger.warning(f"❌ User {user_id} not member yet. Status: {member.status}")
                 return
         except Exception as e:
             logger.error(f"❌ Verify button check error: {e}", exc_info=True)
@@ -297,16 +306,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "close_banner":
         logger.info(f"❌ Close banner for user {user_id}")
         try:
+            await query.answer()
             await query.message.delete()
-            await query.answer("Closed", show_alert=False)
         except Exception as e:
             logger.error(f"Close error: {e}")
             try:
                 await query.message.edit_text("Closed", parse_mode="HTML")
-            except Exception:
-                pass
-            try:
-                await query.answer("Closed", show_alert=False)
             except Exception:
                 pass
         return
@@ -314,11 +319,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "contact_owner":
         logger.info(f"📞 Contact owner for user {user_id}")
         try:
+            await query.answer()
             if OWNER_USERNAME:
                 await context.bot.send_message(chat_id=query.message.chat_id, text=f"Contact owner: https://t.me/{OWNER_USERNAME}")
             else:
                 await context.bot.send_message(chat_id=query.message.chat_id, text="Owner contact not configured.")
-            await query.answer()
         except Exception as e:
             logger.error(f"Contact error: {e}")
         return
@@ -387,6 +392,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     logger.warning(f"⚠️ Unknown callback: {query.data}")
+    try:
+        await query.answer("Unknown action", show_alert=False)
+    except Exception:
+        pass
 
 
 """---------------------- Menus--------------------- """
