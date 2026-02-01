@@ -12,8 +12,8 @@ from pymongo import MongoClient
 logger = logging.getLogger(__name__)
 
 # MongoDB Connection Setup
-MONGODB_URI = os.environ.get("MONGODB_URI", "")
-MONGODB_DATABASE = os.environ.get("MONGODB_DATABASE", "")
+MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
+MONGODB_DATABASE = os.environ.get("MONGODB_DATABASE", "video_cover_bot")
 
 try:
     mongo_client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
@@ -106,4 +106,68 @@ def has_thumbnail(user_id: int) -> bool:
         return has_thumb
     except Exception as e:
         logger.error(f"❌ Error checking thumbnail: {e}")
+        return False
+
+
+def save_dump_channel(user_id: int, channel_id: str) -> bool:
+    """Save user's dump channel ID to MongoDB"""
+    if not DB_AVAILABLE:
+        logger.debug(f"Database not available, skipping dump channel save for user {user_id}")
+        return False
+    
+    try:
+        users_collection.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
+                    "user_id": user_id,
+                    "dump_channel_id": channel_id,
+                    "updated_at": datetime.now()
+                }
+            },
+            upsert=True
+        )
+        logger.info(f"✅ Dump channel saved for user {user_id}: {channel_id}")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Error saving dump channel: {e}")
+        return False
+
+
+def get_dump_channel(user_id: int) -> str | None:
+    """Retrieve user's dump channel ID from MongoDB"""
+    if not DB_AVAILABLE:
+        logger.debug(f"Database not available, cannot get dump channel for user {user_id}")
+        return None
+    
+    try:
+        user_record = users_collection.find_one({"user_id": user_id})
+        if user_record and "dump_channel_id" in user_record:
+            logger.info(f"✅ Retrieved dump channel for user {user_id}")
+            return user_record["dump_channel_id"]
+        logger.info(f"⚠️ No dump channel found for user {user_id}")
+        return None
+    except Exception as e:
+        logger.error(f"❌ Error retrieving dump channel: {e}")
+        return None
+
+
+def delete_dump_channel(user_id: int) -> bool:
+    """Delete user's dump channel ID from MongoDB"""
+    if not DB_AVAILABLE:
+        logger.debug(f"Database not available, skipping dump channel delete for user {user_id}")
+        return False
+    
+    try:
+        result = users_collection.update_one(
+            {"user_id": user_id},
+            {"$unset": {"dump_channel_id": ""}}
+        )
+        if result.modified_count > 0:
+            logger.info(f"✅ Dump channel deleted for user {user_id}")
+            return True
+        logger.info(f"⚠️ No dump channel to delete for user {user_id}")
+        return False
+    except Exception as e:
+        logger.error(f"❌ Error deleting dump channel: {e}")
         return False
