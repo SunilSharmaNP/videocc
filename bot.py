@@ -20,6 +20,9 @@ from database import (
     save_thumbnail, get_thumbnail, delete_thumbnail, has_thumbnail,
     save_dump_channel, get_dump_channel, delete_dump_channel
 )
+import tempfile
+import subprocess
+from PIL import Image
 
 # Logging
 logging.basicConfig(
@@ -897,6 +900,254 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
+async def convert_document_to_video(file_path: str, output_path: str, is_video: bool = False) -> bool:
+    """
+    Convert document/video file to MP4 video using FFmpeg.
+    
+    Supports:
+    - Video formats: MOV, AVI, MKV, WebM, FLV, WMV, 3GP, etc. → MP4
+    - Image formats: PDF (first page), JPG, PNG, WebP, BMP → 5sec video
+    
+    Returns: True if successful, False otherwise
+    """
+    try:
+        file_lower = file_path.lower()
+        
+        # If it's a video file - convert to MP4 with better compression
+        if is_video:
+            cmd = [
+                "ffmpeg", "-y", "-i", file_path,
+                "-c:v", "libx264",
+                "-preset", "medium",  # medium speed for better compression
+                "-crf", "23",  # Quality (lower=better, 0-51)
+                "-pix_fmt", "yuv420p",
+                "-c:a", "aac",  # Audio codec
+                "-b:a", "128k",  # Audio bitrate
+                output_path
+            ]
+            logger.info(f"🎬 Converting video format to MP4: {file_path}")
+        
+        # If it's a PDF - extract first page and convert to video
+        elif file_lower.endswith('.pdf'):
+            temp_img = tempfile.NamedTemporaryFile(suffix=".png", delete=False).name
+            try:
+                cmd = [
+                    "ffmpeg", "-y", "-i", file_path,
+                    "-vframes", "1",
+                    temp_img
+                ]
+                result = subprocess.run(cmd, capture_output=True, timeout=30)
+                if result.returncode != 0:
+                    logger.error(f"PDF conversion failed: {result.stderr.decode()}")
+                    return False
+                file_path = temp_img
+            except Exception as e:
+                logger.error(f"PDF to image conversion error: {e}")
+                return False
+            
+            # Convert image to 5-second video
+            cmd = [
+                "ffmpeg", "-y",
+                "-framerate", "1",
+                "-i", file_path,
+                "-c:v", "libx264",
+                "-pix_fmt", "yuv420p",
+                "-t", "5",
+                output_path
+            ]
+            logger.info(f"📄 Converting PDF to 5-second video")
+        
+        # Image files - convert to 5-second video
+        else:
+            cmd = [
+                "ffmpeg", "-y",
+                "-framerate", "1",
+                "-i", file_path,
+                "-c:v", "libx264",
+                "-pix_fmt", "yuv420p",
+                "-t", "5",
+                output_path
+            ]
+            logger.info(f"🖼️ Converting image to 5-second video")
+        
+        result = subprocess.run(cmd, capture_output=True, timeout=120)
+        
+        if result.returncode != 0:
+            logger.error(f"FFmpeg conversion failed: {result.stderr.decode()}")
+            return False
+        
+        logger.info(f"✅ File converted to MP4: {output_path}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Conversion error: {e}")
+        return False
+
+
+async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle document files - convert to video with cover"""
+    if not await check_force_sub(update, context):
+        return
+    
+    user_id = update.message.from_user.id
+    cover = get_thumbnail(user_id)
+    
+    if not cover:
+        return await update.message.reply_text(
+            "❌ Send A Photo First to set thumbnail.",
+            reply_to_message_id=update.message.message_id
+        )
+    
+    # Check file type
+    doc = update.message.document
+    file_mime = doc.mime_type or ""
+    file_name = doc.file_name or "document"
+    file_ext = os.path.splitext(file_name)[1].lower()
+    
+    # Video formats (unsupported by Telegram or need conversion)
+    video_formats = [
+        'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
+        'video/webm', 'video/x-flv', 'video/x-msvideo',
+        'video/x-ms-wmv', 'video/3gpp', 'video/mpeg'
+    ]
+    video_extensions = ['.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', '.3gp', '.mpeg', '.mpg', '.m4v', '.ogv']
+    
+    # Image formats
+    image_formats = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp']
+    image_extensions = ['.jpg', '.jpeg', '.png', '.webp', '.bmp']
+    
+    # PDF format
+    is_pdf = file_mime == 'application/pdf' or file_ext == '.pdf'
+    
+    # Check if it's a video file
+    is_video_file = any(fmt in file_mime for fmt in video_formats) or file_ext in video_extensions
+    
+    # Check if it's an image file
+    is_image_file = any(fmt in file_mime for fmt in image_formats) or file_ext in image_extensions
+    
+    # Validate file type
+    if not (is_video_file or is_image_file or is_pdf):
+        return await update.message.reply_text(
+            "❌ Unsupported format.\n\n"
+            "<b>Supported Video Formats:</b>\n"
+            "MOV, AVI, MKV, WebM, FLV, WMV, 3GP, MP4, MPEG\n\n"
+            "<b>Supported Image Formats:</b>\n"
+            "JPG, PNG, WebP, BMP, PDF",
+            reply_to_message_id=update.message.message_id,
+            parse_mode="HTML"
+        )
+    
+    # Determine action type
+    if is_video_file:
+        action = "🎬 Converting video format to MP4..."
+    elif is_image_file:
+        action = "🖼️ Converting image to video..."
+    else:
+        action = "📄 Converting PDF to video..."
+    
+    msg = await update.message.reply_text(
+        action,
+        reply_to_message_id=update.message.message_id
+    )
+    
+    temp_input = None
+    temp_output = None
+    
+    try:
+        # Download file temporarily
+        file_ext = os.path.splitext(doc.file_name)[1] if doc.file_name else ".tmp"
+        temp_input = tempfile.NamedTemporaryFile(suffix=file_ext, delete=False).name
+        file = await context.bot.get_file(doc.file_id)
+        await file.download_to_drive(temp_input)
+        logger.info(f"📥 Document downloaded: {temp_input}")
+        
+        # Convert to MP4
+        temp_output = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
+        success = await convert_document_to_video(temp_input, temp_output, is_video=is_video_file)
+        
+        if not success:
+            await msg.edit_text("❌ Failed to convert file.")
+            return
+        
+        await msg.edit_text("✅ Conversion done. Adding cover...")
+        
+        # Get original filename for caption
+        caption = f"✅ <b>Video from {file_name}</b>\n\nCover Added."
+        
+        # Check if user has dump channel
+        dump_channel = get_dump_channel(user_id)
+        if dump_channel:
+            try:
+                # Send to dump channel first
+                with open(temp_output, 'rb') as video_file:
+                    dump_msg = await context.bot.send_video(
+                        chat_id=dump_channel,
+                        video=video_file,
+                        caption=caption,
+                        thumbnail=cover,
+                        supports_streaming=True,
+                        parse_mode="HTML"
+                    )
+                logger.info(f"✅ Video sent to dump channel {dump_channel}")
+                
+                # Send to user
+                await update.message.reply_video(
+                    video=dump_msg.video.file_id,
+                    caption=f"✅ <b>Saved & Converted</b>\n\n{caption}",
+                    thumbnail=cover,
+                    supports_streaming=True,
+                    parse_mode="HTML",
+                    reply_to_message_id=update.message.message_id
+                )
+                await msg.delete()
+            except Exception as e:
+                logger.error(f"Dump channel error: {e}")
+                # Fallback: send directly
+                with open(temp_output, 'rb') as video_file:
+                    await update.message.reply_video(
+                        video=video_file,
+                        caption=caption,
+                        thumbnail=cover,
+                        supports_streaming=True,
+                        parse_mode="HTML",
+                        reply_to_message_id=update.message.message_id
+                    )
+                await msg.delete()
+        else:
+            # Send directly to user
+            with open(temp_output, 'rb') as video_file:
+                await update.message.reply_video(
+                    video=video_file,
+                    caption=caption,
+                    thumbnail=cover,
+                    supports_streaming=True,
+                    parse_mode="HTML",
+                    reply_to_message_id=update.message.message_id
+                )
+            await msg.delete()
+        
+        logger.info(f"✅ Document converted & sent for user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"❌ Document handler error: {e}")
+        await msg.edit_text(f"❌ Error: {str(e)[:100]}")
+    
+    finally:
+        # Cleanup temporary files
+        if temp_input and os.path.exists(temp_input):
+            try:
+                os.remove(temp_input)
+                logger.debug(f"Cleaned up input: {temp_input}")
+            except Exception:
+                pass
+        if temp_output and os.path.exists(temp_output):
+            try:
+                os.remove(temp_output)
+                logger.debug(f"Cleaned up output: {temp_output}")
+            except Exception:
+                pass
+
+
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle text messages - for dump channel ID submission"""
     if not await check_force_sub(update, context):
@@ -963,6 +1214,9 @@ def main() -> None:
     # Photo and video handlers (private chats only via filters)
     app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, photo_handler))
     app.add_handler(MessageHandler(filters.VIDEO & filters.ChatType.PRIVATE, video_handler))
+    
+    # Document handler (PDF & images to video conversion)
+    app.add_handler(MessageHandler(filters.Document.ALL & filters.ChatType.PRIVATE, document_handler))
     
     # Text handler for dump channel ID capture (MUST be LAST - only non-command text)
     # Add filter to exclude commands (messages starting with /)
