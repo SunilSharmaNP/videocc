@@ -927,13 +927,7 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"❌ Error: {e}", parse_mode="HTML")
         return
     
-    # For other text messages, just acknowledge
-    await update.message.reply_text(
-        "👋 Hello! Use /start to begin.\n\n"
-        "/help - How to use\n"
-        "/settings - Settings",
-        parse_mode="HTML"
-    )
+    # Ignore all other text messages (don't respond)
 
 
 """-----------CALLBAck Hnadlers--------"""
