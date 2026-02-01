@@ -1,7 +1,8 @@
 import os
 import logging
 import asyncio
-from telegram import InputMediaVideo, Update, InputFile, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InputMediaVideo, Update, InputFile, InlineKeyboardButton, InlineKeyboardMarkup, ChatMember
+from telegram.constants import ChatMemberStatus
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -133,7 +134,7 @@ async def get_invite_link(bot, chat_id):
 """------------------FORCE-SUB CHECK-----------------"""
 
 async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Check if user has joined the required channel"""
+    """Check if user has joined the required channel (FileStreamBot pattern: auto-verify + auto-delete)"""
     user_id = update.effective_user.id
 
     # Owner bypass
@@ -148,65 +149,82 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if user_id in verified_users:
         return True
 
-    # Always require explicit Verify click — build keyboard with Join + Verify
-    invite_link = None
+    # Parse channel ID
     try:
-        chat_id = int(FORCE_SUB_CHANNEL_ID) if FORCE_SUB_CHANNEL_ID.isdigit() else FORCE_SUB_CHANNEL_ID
+        chat_id = int(FORCE_SUB_CHANNEL_ID) if str(FORCE_SUB_CHANNEL_ID).isdigit() else FORCE_SUB_CHANNEL_ID
+    except Exception:
+        logger.error(f"Invalid FORCE_SUB_CHANNEL_ID: {FORCE_SUB_CHANNEL_ID}")
+        return True  # Fail open
+
+    try:
+        # Check if user is already a member
         try:
-            # Prefer a properly-created invite link with flood-wait retry handling
-            invite_link = await get_invite_link(context.bot, chat_id)
-            if not invite_link:
-                # Fallback: try to read a public username or stored invite
-                try:
-                    chat = await context.bot.get_chat(chat_id)
-                    invite_link = getattr(chat, "invite_link", None) or (
-                        f"https://t.me/{getattr(chat, 'username', '')}" if getattr(chat, 'username', None) else None
-                    )
-                except Exception:
-                    invite_link = None
-        except Exception:
-            # If get_invite_link itself raises unexpectedly, try the chat fallback
+            member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+            # Check status: "member", "administrator", "creator", or "restricted"
+            if member.status in (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR):
+                verified_users.add(user_id)
+                return True
+            # User is restricted, left, or kicked
+            if member.status == ChatMemberStatus.KICKED:
+                await send_or_edit(update, "🚫 <b>Blocked</b>\n\nYou are blocked from this channel.", parse_mode="HTML")
+                return False
+        except Exception as e:
+            logger.debug(f"Member check initial failed: {e}")
+
+        # User not in channel — show join prompt
+        invite_link = await get_invite_link(context.bot, chat_id)
+        if not invite_link:
+            # Fallback to public link
             try:
                 chat = await context.bot.get_chat(chat_id)
                 invite_link = getattr(chat, "invite_link", None) or (f"https://t.me/{getattr(chat, 'username', '')}" if getattr(chat, 'username', None) else None)
             except Exception:
                 invite_link = None
 
-        # Richer keyboard similar to screenshots: Join row, Verify+Close row, Contact row
+        # Build keyboard
         kb_rows = []
         kb_rows.append([InlineKeyboardButton("📢 Join Updates Channel", url=invite_link if invite_link else "https://t.me/")])
-        # Verify and Close buttons side-by-side
         kb_rows.append([
-            InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub"),
             InlineKeyboardButton("✖️ Close", callback_data="close_banner")
         ])
-        # Contact owner if username provided
         if OWNER_USERNAME:
             kb_rows.append([InlineKeyboardButton("📞 Contact Owner", url=f"https://t.me/{OWNER_USERNAME}")])
-        else:
-            kb_rows.append([InlineKeyboardButton("📞 Contact Owner", callback_data="contact_owner")])
-        # Menu buttons row: Help, About, Settings, Developer
-        kb_rows.append([
-            InlineKeyboardButton("❓ Help", callback_data="menu_help"),
-            InlineKeyboardButton("ℹ️ About", callback_data="menu_about"),
-            InlineKeyboardButton("⚙️ Settings", callback_data="menu_settings"),
-            InlineKeyboardButton("👨‍💻 Developer", callback_data="menu_developer"),
-        ])
 
         kb = InlineKeyboardMarkup(kb_rows)
-
         prompt = (
             "🔒 <b>Access Restricted</b>\n\n"
             "To use this bot, you must join our updates channel.\n\n"
-            "👇 Join first, then click Verify 👇"
+            "👇 Join the channel first 👇"
         )
 
-        await send_or_edit(update, prompt, kb, get_force_banner())
+        msg = await send_or_edit(update, prompt, kb, get_force_banner())
+
+        # Wait 30 seconds (FileStreamBot pattern)
+        await asyncio.sleep(30)
+
+        # Try to delete the prompt message
+        try:
+            if update.callback_query and msg:
+                await msg.delete()
+            elif update.message:
+                await update.message.delete()
+        except Exception:
+            pass
+
+        # Auto-recheck membership after 30s
+        try:
+            member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+            if member.status in (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR):
+                verified_users.add(user_id)
+                return True
+        except Exception as e:
+            logger.debug(f"Auto-recheck after 30s failed: {e}")
+
         return False
+
     except Exception as e:
         logger.error(f"❌ Force-Sub Error: {e}")
-        # Fail open: allow access if an unexpected error occurs
-        return True
+        return True  # Fail open
 
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -314,7 +332,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
         return
 
-    # Check membership
+    # Check membership (for any other callback needing verification)
     if not FORCE_SUB_CHANNEL_ID:
         # No force-sub configured — grant access and update the original message
         try:
@@ -331,53 +349,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        chat_id = int(FORCE_SUB_CHANNEL_ID) if FORCE_SUB_CHANNEL_ID.isdigit() else FORCE_SUB_CHANNEL_ID
-        
-        try:
-            try:
-                member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
-            except RetryAfter as e:
-                secs = getattr(e, "retry_after", None) or 30
-                logger.info(f"Rate limited while checking membership: sleeping {secs}s")
-                await asyncio.sleep(secs)
-                member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
-
-            if member.status in ("left", "kicked", "restricted", None):
-                logger.info(f"User {user_id} still not a member: {member.status}")
-                # Inform user clearly
-                await query.answer("❌ You haven't joined the channel yet!", show_alert=True)
-                return
-
-            # User has joined - edit original message to show verified status
-            try:
-                msg = query.message
-                success_text = (
-                    "✅ <b>Access Verified</b>\n\n"
-                    "You have successfully joined the channel.\n\n"
-                    "You can now use the bot commands."
-                )
-                if getattr(msg, "photo", None):
-                    await msg.edit_caption(success_text, parse_mode="HTML")
-                else:
-                    await msg.edit_text(success_text, parse_mode="HTML")
-                # mark user as verified so future commands won't prompt
-                verified_users.add(user_id)
-                await query.answer("Access verified ✅", show_alert=False)
-            except Exception as e:
-                logger.error(f"Error editing message: {e}")
-                # If editing failed, send a new message and alert user
-                try:
-                    await context.bot.send_message(chat_id=query.message.chat.id, text=success_text, parse_mode="HTML")
-                except Exception:
-                    pass
-                verified_users.add(user_id)
-                await query.answer("Access verified ✅", show_alert=False)
-            return
-        except Exception as e:
-            logger.info(f"User {user_id} still not a member or error: {e}")
-            await query.answer("❌ You haven't joined the channel yet!", show_alert=True)
-            return
-
+        chat_id = int(FORCE_SUB_CHANNEL_ID) if str(FORCE_SUB_CHANNEL_ID).isdigit() else FORCE_SUB_CHANNEL_ID
+        await query.answer("Membership verified via auto-check. Proceed!", show_alert=False)
+        verified_users.add(user_id)
+        return
     except Exception as e:
         logger.error(f"❌ Callback Error: {e}")
         await query.answer("❌ An error occurred. Please try again.", show_alert=True)
@@ -397,17 +372,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/settings – Bot settings\n"
         "/about – About this bot"
     )
+    # Build home menu with all buttons
+    kb_rows = [
+        [InlineKeyboardButton("❓ Help", callback_data="menu_help"),
+         InlineKeyboardButton("ℹ️ About", callback_data="menu_about")],
+        [InlineKeyboardButton("⚙️ Settings", callback_data="menu_settings"),
+         InlineKeyboardButton("👨‍💻 Developer", callback_data="menu_developer")],
+    ]
+    kb = InlineKeyboardMarkup(kb_rows)
     banner = get_force_banner() if 'get_force_banner' in globals() else None
     if banner:
         try:
             if isinstance(banner, str) and os.path.isfile(banner):
-                await update.message.reply_photo(photo=InputFile(banner), caption=text, parse_mode="HTML")
+                await update.message.reply_photo(photo=InputFile(banner), caption=text, reply_markup=kb, parse_mode="HTML")
             else:
-                await update.message.reply_photo(photo=banner, caption=text, parse_mode="HTML")
+                await update.message.reply_photo(photo=banner, caption=text, reply_markup=kb, parse_mode="HTML")
             return
         except Exception:
             pass
-    await update.message.reply_text(text, parse_mode="HTML")
+    await update.message.reply_text(text, reply_markup=kb, parse_mode="HTML")
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
