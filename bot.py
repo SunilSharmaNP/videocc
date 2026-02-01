@@ -1,6 +1,6 @@
 import os
 import logging
-from telegram import InputMediaVideo, Update
+from telegram import InputMediaVideo, Update, InputFile
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -34,6 +34,21 @@ OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 FORCE_SUB_CHANNEL_ID = os.environ.get("FORCE_SUB_CHANNEL_ID")
 FORCE_SUB_BANNER_URL = os.environ.get("FORCE_SUB_BANNER_URL")
 
+# Fallback: if no banner URL provided, try to use first image from ./ui/
+FALLBACK_BANNER = None
+try:
+    ui_dir = os.path.join(os.path.dirname(__file__), "ui")
+    if os.path.isdir(ui_dir):
+        for f in os.listdir(ui_dir):
+            if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+                FALLBACK_BANNER = os.path.join(ui_dir, f)
+                break
+except Exception:
+    FALLBACK_BANNER = None
+
+# Final banner to use (either env URL, or fallback local file, or None)
+FORCE_SUB_BANNER = FORCE_SUB_BANNER_URL or FALLBACK_BANNER
+
 
 # In-memory per-user thumbnail storage (keeps only file_ids)
 user_data = {}
@@ -42,18 +57,36 @@ user_data = {}
 async def send_or_edit(update: Update, text, reply_markup=None, force_banner=None):
     if update.callback_query:
         try:
-            await update.callback_query.message.edit_text(
-                text,
-                reply_markup=reply_markup,
-                parse_mode="HTML",
-                disable_web_page_preview=True,
-            )
+            # If original message contains a photo, edit the caption instead
+            msg = update.callback_query.message
+            if getattr(msg, "photo", None):
+                await msg.edit_caption(
+                    text,
+                    reply_markup=reply_markup,
+                    parse_mode="HTML",
+                )
+            else:
+                await msg.edit_text(
+                    text,
+                    reply_markup=reply_markup,
+                    parse_mode="HTML",
+                    disable_web_page_preview=True,
+                )
         except BadRequest:
             pass
     else:
         if force_banner:
+            # Support local file paths in addition to URLs
+            try:
+                if isinstance(force_banner, str) and os.path.isfile(force_banner):
+                    photo = InputFile(force_banner)
+                else:
+                    photo = force_banner
+            except Exception:
+                photo = force_banner
+
             await update.message.reply_photo(
-                photo=force_banner,
+                photo=photo,
                 caption=text,
                 reply_markup=reply_markup,
                 parse_mode="HTML",
@@ -114,7 +147,7 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 [InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub")]
             ])
 
-            await send_or_edit(update, text, kb, FORCE_SUB_BANNER_URL)
+            await send_or_edit(update, text, kb, FORCE_SUB_BANNER)
             return False
 
         # User is a member
@@ -138,12 +171,17 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Check membership
     if not FORCE_SUB_CHANNEL_ID:
-        await query.message.delete()
-        await context.bot.send_message(
-            chat_id=query.message.chat_id,
-            text="✅ <b>Access Granted</b>\n\nYou can now use the bot.",
-            parse_mode="HTML"
-        )
+        # No force-sub configured — grant access and update the original message
+        try:
+            msg = query.message
+            text = "✅ <b>Access Granted</b>\n\nYou can now use the bot."
+            if getattr(msg, "photo", None):
+                await msg.edit_caption(text, parse_mode="HTML")
+            else:
+                await msg.edit_text(text, parse_mode="HTML")
+        except Exception:
+            await context.bot.send_message(chat_id=query.message.chat.id, text="✅ <b>Access Granted</b>\n\nYou can now use the bot.", parse_mode="HTML")
+        return
         return
 
     try:
@@ -152,27 +190,30 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
             if member.status in ("left", "kicked", "restricted", None):
-                raise Exception("Still not a member")
+                logger.info(f"User {user_id} still not a member: {member.status}")
+                await query.answer("❌ You haven't joined the channel yet!", show_alert=True)
+                return
+
+            # User has joined - edit original message to show verified status
+            try:
+                msg = query.message
+                success_text = (
+                    "✅ <b>Access Verified</b>\n\n"
+                    "You have successfully joined the channel.\n\n"
+                    "You can now use the bot commands."
+                )
+                if getattr(msg, "photo", None):
+                    await msg.edit_caption(success_text, parse_mode="HTML")
+                else:
+                    await msg.edit_text(success_text, parse_mode="HTML")
+            except Exception as e:
+                logger.error(f"Error editing message: {e}")
+                await context.bot.send_message(chat_id=query.message.chat.id, text=success_text, parse_mode="HTML")
+            return
         except Exception as e:
-            logger.info(f"User {user_id} still not a member: {e}")
+            logger.info(f"User {user_id} still not a member or error: {e}")
             await query.answer("❌ You haven't joined the channel yet!", show_alert=True)
             return
-
-        # User has joined - delete old message and send success
-        try:
-            await query.message.delete()
-        except Exception as e:
-            logger.error(f"Error deleting message: {e}")
-
-        await context.bot.send_message(
-            chat_id=query.message.chat_id,
-            text=(
-                "✅ <b>Access Verified</b>\n\n"
-                "You have successfully joined the channel.\n\n"
-                "You can now use the bot commands."
-            ),
-            parse_mode="HTML"
-        )
 
     except Exception as e:
         logger.error(f"❌ Callback Error: {e}")
