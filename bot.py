@@ -13,7 +13,7 @@ from telegram.ext import (
 from config import config
 import sys
 from updater import update_from_upstream
-from telegram.error import BadRequest
+from telegram.error import BadRequest, FloodWait
 import random
 
 # Logging
@@ -31,6 +31,7 @@ if not TOKEN:
 OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 FORCE_SUB_CHANNEL_ID = os.environ.get("FORCE_SUB_CHANNEL_ID")
 FORCE_SUB_BANNER_URL = os.environ.get("FORCE_SUB_BANNER_URL")
+OWNER_USERNAME = os.environ.get("OWNER_USERNAME", "")
 
 # Fallback: collect images from ./ui/ and pick randomly when showing banner
 FALLBACK_BANNER = None
@@ -112,6 +113,23 @@ async def send_or_edit(update: Update, text, reply_markup=None, force_banner=Non
                 disable_web_page_preview=True,
             )
 
+
+async def get_invite_link(bot, chat_id):
+    """Create or return a chat invite link with FloodWait handling."""
+    try:
+        link_obj = await bot.create_chat_invite_link(chat_id=chat_id, member_limit=1)
+        # Different objects may expose either 'invite_link' attribute or be a string
+        return getattr(link_obj, "invite_link", link_obj)
+    except FloodWait as e:
+        # support multiple attribute names for the wait duration
+        secs = getattr(e, "value", None) or getattr(e, "x", None) or getattr(e, "retry_after", None) or 30
+        logger.info(f"FloodWait while creating invite link: sleeping {secs}s")
+        await asyncio.sleep(secs)
+        return await get_invite_link(bot, chat_id)
+    except Exception as e:
+        logger.error(f"get_invite_link failed: {e}")
+        return None
+
 """------------------FORCE-SUB CHECK-----------------"""
 
 async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -135,19 +153,47 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     try:
         chat_id = int(FORCE_SUB_CHANNEL_ID) if FORCE_SUB_CHANNEL_ID.isdigit() else FORCE_SUB_CHANNEL_ID
         try:
-            link_obj = await context.bot.create_chat_invite_link(chat_id=chat_id, member_limit=1)
-            invite_link = link_obj.invite_link
+            # Prefer a properly-created invite link with flood-wait retry handling
+            invite_link = await get_invite_link(context.bot, chat_id)
+            if not invite_link:
+                # Fallback: try to read a public username or stored invite
+                try:
+                    chat = await context.bot.get_chat(chat_id)
+                    invite_link = getattr(chat, "invite_link", None) or (
+                        f"https://t.me/{getattr(chat, 'username', '')}" if getattr(chat, 'username', None) else None
+                    )
+                except Exception:
+                    invite_link = None
         except Exception:
+            # If get_invite_link itself raises unexpectedly, try the chat fallback
             try:
                 chat = await context.bot.get_chat(chat_id)
                 invite_link = getattr(chat, "invite_link", None) or (f"https://t.me/{getattr(chat, 'username', '')}" if getattr(chat, 'username', None) else None)
             except Exception:
                 invite_link = None
 
-        kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📢 Join Updates Channel", url=invite_link if invite_link else "https://t.me/")],
-            [InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub")]
+        # Richer keyboard similar to screenshots: Join row, Verify+Close row, Contact row
+        kb_rows = []
+        kb_rows.append([InlineKeyboardButton("📢 Join Updates Channel", url=invite_link if invite_link else "https://t.me/")])
+        # Verify and Close buttons side-by-side
+        kb_rows.append([
+            InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub"),
+            InlineKeyboardButton("✖️ Close", callback_data="close_banner")
         ])
+        # Contact owner if username provided
+        if OWNER_USERNAME:
+            kb_rows.append([InlineKeyboardButton("📞 Contact Owner", url=f"https://t.me/{OWNER_USERNAME}")])
+        else:
+            kb_rows.append([InlineKeyboardButton("📞 Contact Owner", callback_data="contact_owner")])
+        # Menu buttons row: Help, About, Settings, Developer
+        kb_rows.append([
+            InlineKeyboardButton("❓ Help", callback_data="menu_help"),
+            InlineKeyboardButton("ℹ️ About", callback_data="menu_about"),
+            InlineKeyboardButton("⚙️ Settings", callback_data="menu_settings"),
+            InlineKeyboardButton("👨‍💻 Developer", callback_data="menu_developer"),
+        ])
+
+        kb = InlineKeyboardMarkup(kb_rows)
 
         prompt = (
             "🔒 <b>Access Restricted</b>\n\n"
@@ -166,7 +212,7 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle callback query for force-sub verification"""
     query = update.callback_query
-    if not query or query.data != "check_fsub":
+    if not query or not query.data:
         return
 
     # Acknowledge callback immediately so user sees the button press
@@ -181,6 +227,93 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = query.from_user.id
     
+    # Handle other callback actions first
+    if query.data == "close_banner":
+        try:
+            await query.message.delete()
+            await query.answer("Closed", show_alert=False)
+        except Exception:
+            try:
+                await query.message.edit_text("Closed", parse_mode="HTML")
+            except Exception:
+                pass
+            try:
+                await query.answer("Closed", show_alert=False)
+            except Exception:
+                pass
+        return
+
+    if query.data == "contact_owner":
+        try:
+            if OWNER_USERNAME:
+                await context.bot.send_message(chat_id=query.message.chat_id, text=f"Contact owner: https://t.me/{OWNER_USERNAME}")
+            else:
+                await context.bot.send_message(chat_id=query.message.chat_id, text="Owner contact not configured.")
+            await query.answer()
+        except Exception:
+            pass
+        return
+
+    # Menu callbacks: show help/about/settings/developer inline
+    if query.data.startswith("menu_"):
+        key = query.data.split("menu_")[1]
+        try:
+            if key == "help":
+                text = (
+                    "ℹ️ <b>Help Menu</b>\n\n"
+                    "1️⃣ Send a <b>photo</b> → thumbnail saved\n"
+                    "2️⃣ Send a <b>video</b> → cover applied\n\n"
+                    "<b>Commands:</b>\n"
+                    "/remove – Remove saved thumbnail\n"
+                    "/settings – View bot settings\n"
+                    "/about – About this bot"
+                )
+            elif key == "about":
+                text = (
+                    "🤖 <b>Instant Video Cover Bot</b>\n\n"
+                    "✨ Features:\n"
+                    "• Instant thumbnail apply\n"
+                    "• One thumbnail per user\n"
+                    "• Fast & simple\n\n"
+                    "🛠 Powered by python-telegram-bot"
+                )
+            elif key == "settings":
+                uid = query.from_user.id
+                thumb_status = "✅ Set" if uid in user_data else "❌ Not Set"
+                text = (
+                    "⚙️ <b>Settings</b>\n\n"
+                    f"🖼 Thumbnail: <b>{thumb_status}</b>\n\n"
+                    "Use /remove to delete thumbnail"
+                )
+            elif key == "developer":
+                dev_contact = f"https://t.me/{OWNER_USERNAME}" if OWNER_USERNAME else f"tg://user?id={OWNER_ID}"
+                text = (
+                    "👨‍💻 <b>Developer</b>\n\n"
+                    f"Contact: {dev_contact}\n"
+                    "If you need help, reach out to the developer."
+                )
+            else:
+                text = (
+                    "ℹ️ <b>Info</b>\n\n"
+                    "No information available for this menu."
+                )
+            # Try to edit original message's caption/text first
+            try:
+                msg = query.message
+                if getattr(msg, "photo", None):
+                    await msg.edit_caption(text, parse_mode="HTML")
+                else:
+                    await msg.edit_text(text, parse_mode="HTML")
+            except Exception:
+                await context.bot.send_message(chat_id=query.message.chat.id, text=text, parse_mode="HTML")
+            await query.answer()
+        except Exception:
+            try:
+                await query.answer("An error occurred.", show_alert=True)
+            except Exception:
+                pass
+        return
+
     # Check membership
     if not FORCE_SUB_CHANNEL_ID:
         # No force-sub configured — grant access and update the original message
@@ -201,7 +334,14 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         chat_id = int(FORCE_SUB_CHANNEL_ID) if FORCE_SUB_CHANNEL_ID.isdigit() else FORCE_SUB_CHANNEL_ID
         
         try:
-            member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+            try:
+                member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+            except FloodWait as e:
+                secs = getattr(e, "value", None) or getattr(e, "x", None) or getattr(e, "retry_after", None) or 30
+                logger.info(f"FloodWait while checking membership: sleeping {secs}s")
+                await asyncio.sleep(secs)
+                member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+
             if member.status in ("left", "kicked", "restricted", None):
                 logger.info(f"User {user_id} still not a member: {member.status}")
                 # Inform user clearly
@@ -220,7 +360,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await msg.edit_caption(success_text, parse_mode="HTML")
                 else:
                     await msg.edit_text(success_text, parse_mode="HTML")
-                # Give a short toast confirmation as well
                 # mark user as verified so future commands won't prompt
                 verified_users.add(user_id)
                 await query.answer("Access verified ✅", show_alert=False)
@@ -397,7 +536,8 @@ def main() -> None:
     app.add_handler(CommandHandler("settings", settings, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("restart", restart, filters=filters.ChatType.PRIVATE))
     
-    app.add_handler(CallbackQueryHandler(callback_handler, pattern="^check_fsub$"))
+    # Register a general callback handler (handles verify, close, contact, etc.)
+    app.add_handler(CallbackQueryHandler(callback_handler))
 
 
 
