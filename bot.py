@@ -14,6 +14,7 @@ from config import config
 import sys
 from updater import update_from_upstream
 from telegram.error import BadRequest
+import random
 
 # Logging
 logging.basicConfig(
@@ -31,20 +32,33 @@ OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 FORCE_SUB_CHANNEL_ID = os.environ.get("FORCE_SUB_CHANNEL_ID")
 FORCE_SUB_BANNER_URL = os.environ.get("FORCE_SUB_BANNER_URL")
 
-# Fallback: if no banner URL provided, try to use first image from ./ui/
+# Fallback: collect images from ./ui/ and pick randomly when showing banner
 FALLBACK_BANNER = None
+UI_BANNERS = []
 try:
     ui_dir = os.path.join(os.path.dirname(__file__), "ui")
     if os.path.isdir(ui_dir):
-        for f in os.listdir(ui_dir):
-            if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
-                FALLBACK_BANNER = os.path.join(ui_dir, f)
-                break
+        UI_BANNERS = [os.path.join(ui_dir, f) for f in os.listdir(ui_dir) if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))]
+        if UI_BANNERS:
+            FALLBACK_BANNER = UI_BANNERS[0]
 except Exception:
+    UI_BANNERS = []
     FALLBACK_BANNER = None
 
-# Final banner to use (either env URL, or fallback local file, or None)
+# Final banner env value (may be URL) or local fallback
 FORCE_SUB_BANNER = FORCE_SUB_BANNER_URL or FALLBACK_BANNER
+
+
+def get_force_banner():
+    """Return a banner URL or local file path. Prefer env URL; else pick random local image."""
+    if FORCE_SUB_BANNER_URL:
+        return FORCE_SUB_BANNER_URL
+    try:
+        if UI_BANNERS:
+            return random.choice(UI_BANNERS)
+    except Exception:
+        pass
+    return FALLBACK_BANNER
 
 
 # In-memory per-user thumbnail storage (keeps only file_ids)
@@ -141,7 +155,7 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "👇 Join first, then click Verify 👇"
         )
 
-        await send_or_edit(update, prompt, kb, FORCE_SUB_BANNER)
+        await send_or_edit(update, prompt, kb, get_force_banner())
         return False
     except Exception as e:
         logger.error(f"❌ Force-Sub Error: {e}")
@@ -160,6 +174,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer()
     except Exception:
         pass
+
+    logger.info(f"Received callback: {query.data} from {query.from_user.id}")
 
     # Defer further responses until we know the result so user sees a clear message
 
@@ -233,41 +249,71 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
-    await update.message.reply_text(
+    text = (
         "👋 <b>Welcome to Instant Cover Bot</b>\n\n"
         "📸 Send a <b>photo</b> to set thumbnail\n"
         "🎥 Send a <b>video</b> to get it with cover\n\n"
         "🧩 Commands:\n"
         "/help – How to use bot\n"
         "/settings – Bot settings\n"
-        "/about – About this bot",
-        parse_mode="HTML"
+        "/about – About this bot"
     )
+    banner = get_force_banner() if 'get_force_banner' in globals() else None
+    if banner:
+        try:
+            if isinstance(banner, str) and os.path.isfile(banner):
+                await update.message.reply_photo(photo=InputFile(banner), caption=text, parse_mode="HTML")
+            else:
+                await update.message.reply_photo(photo=banner, caption=text, parse_mode="HTML")
+            return
+        except Exception:
+            pass
+    await update.message.reply_text(text, parse_mode="HTML")
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
-    await update.message.reply_text(
+    text = (
         "ℹ️ <b>Help Menu</b>\n\n"
         "1️⃣ Send a <b>photo</b> → thumbnail saved\n"
         "2️⃣ Send a <b>video</b> → cover applied\n\n"
         "<b>Commands:</b>\n"
         "/remove – Remove saved thumbnail\n"
         "/settings – View bot settings\n"
-        "/about – About this bot",
-        parse_mode="HTML"
+        "/about – About this bot"
     )
+    banner = get_force_banner() if 'get_force_banner' in globals() else None
+    if banner:
+        try:
+            if isinstance(banner, str) and os.path.isfile(banner):
+                await update.message.reply_photo(photo=InputFile(banner), caption=text, parse_mode="HTML")
+            else:
+                await update.message.reply_photo(photo=banner, caption=text, parse_mode="HTML")
+            return
+        except Exception:
+            pass
+    await update.message.reply_text(text, parse_mode="HTML")
 async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
-    await update.message.reply_text(
+    text = (
         "🤖 <b>Instant Video Cover Bot</b>\n\n"
         "✨ Features:\n"
         "• Instant thumbnail apply\n"
         "• One thumbnail per user\n"
         "• Fast & simple\n\n"
-        "🛠 Powered by python-telegram-bot",
-        parse_mode="HTML"
+        "🛠 Powered by python-telegram-bot"
     )
+    banner = get_force_banner() if 'get_force_banner' in globals() else None
+    if banner:
+        try:
+            if isinstance(banner, str) and os.path.isfile(banner):
+                await update.message.reply_photo(photo=InputFile(banner), caption=text, parse_mode="HTML")
+            else:
+                await update.message.reply_photo(photo=banner, caption=text, parse_mode="HTML")
+            return
+        except Exception:
+            pass
+    await update.message.reply_text(text, parse_mode="HTML")
 async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
