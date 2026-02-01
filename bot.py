@@ -1093,8 +1093,11 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     video = update.message.video.file_id
     
     # Get original caption and preserve it
-    original_caption = update.message.caption or None
-    new_caption = original_caption
+    original_caption = update.message.caption or ""
+
+    # 🔥 BOLD caption (HTML safe)
+    new_caption = f"<b>{original_caption}</b>" if original_caption else None
+
     
     media = InputMediaVideo(media=video, caption=new_caption, supports_streaming=True, cover=cover)
     
@@ -1109,7 +1112,8 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     video=video,
                     caption=new_caption,
                     supports_streaming=True,
-                    thumbnail=cover
+                    thumbnail=cover,
+                    parse_mode="HTML" 
                 )
                 logger.info(f"✅ Video sent to dump channel {dump_channel} for user {user_id}")
                 # Then send to user
@@ -1117,7 +1121,8 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     video=dump_msg.video.file_id,
                     caption=new_caption,
                     supports_streaming=True,
-                    reply_to_message_id=update.message.message_id
+                    reply_to_message_id=update.message.message_id,
+                    parse_mode="HTML"
                 )
                 await msg.delete()
             except Exception as e:
@@ -1142,7 +1147,8 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     video=video,
                     caption=log_caption,
                     supports_streaming=True,
-                    thumbnail=cover
+                    thumbnail=cover,
+                    parse_mode="HTML"
                 )
                 logger.debug(f"✅ Video logged to channel for user {user_id}")
             except Exception as e:
