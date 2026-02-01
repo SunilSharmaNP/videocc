@@ -790,13 +790,22 @@ async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
     user_id = update.message.from_user.id
-    thumb_status = "✅ Set" if user_id in user_data else "❌ Not Set"
-    await update.message.reply_text(
+    # Show both thumbnails and dump channel status, redirect to submenu
+    thumb_status = "✅ Saved" if has_thumbnail(user_id) else "❌ Not Saved"
+    dump_status = "✅ Set" if get_dump_channel(user_id) else "❌ Not Set"
+    
+    text = (
         "⚙️ <b>Settings</b>\n\n"
-        f"🖼 Thumbnail: <b>{thumb_status}</b>\n\n"
-        "Use /remove to delete thumbnail",
-        parse_mode="HTML"
+        f"🖼 Thumbnail: <b>{thumb_status}</b>\n"
+        f"📁 Dump Channel: <b>{dump_status}</b>\n\n"
+        "Choose what you want to manage:"
     )
+    settings_kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🖼 Thumbnails", callback_data="submenu_thumbnails"),
+         InlineKeyboardButton("📁 Dump Channel", callback_data="submenu_dumpchannel")],
+        [InlineKeyboardButton("⬅️ Back", callback_data="menu_back")]
+    ])
+    await update.message.reply_text(text, reply_markup=settings_kb, parse_mode="HTML")
 
 
 async def remover(update: Update, context: ContextTypes.DEFAULT_TYPE):
