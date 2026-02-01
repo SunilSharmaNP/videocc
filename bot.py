@@ -49,6 +49,8 @@ FORCE_SUB_BANNER = FORCE_SUB_BANNER_URL or FALLBACK_BANNER
 
 # In-memory per-user thumbnail storage (keeps only file_ids)
 user_data = {}
+# In-memory set of users who completed the verify step
+verified_users = set()
 
 """--------------------HELPER FUNCTIONS--------------------"""
 async def send_or_edit(update: Update, text, reply_markup=None, force_banner=None):
@@ -100,59 +102,68 @@ async def send_or_edit(update: Update, text, reply_markup=None, force_banner=Non
 
 async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Check if user has joined the required channel"""
-    if update.effective_user.id == OWNER_ID:
+    user_id = update.effective_user.id
+
+    # Owner bypass
+    if user_id == OWNER_ID:
         return True
+
+    # If no force-sub configured, allow access
     if not FORCE_SUB_CHANNEL_ID:
         return True
 
-    user_id = update.effective_user.id
+    # If user already completed the verify step, allow access
+    if user_id in verified_users:
+        return True
 
+    # Determine membership to build appropriate keyboard
+    is_member = False
+    invite_link = None
     try:
         chat_id = int(FORCE_SUB_CHANNEL_ID) if FORCE_SUB_CHANNEL_ID.isdigit() else FORCE_SUB_CHANNEL_ID
-        
-        # Check user's membership status
         try:
             member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
-            if member.status in ("left", "kicked", "restricted", None):
-                raise Exception("User not a member")
-        except Exception as e:
-            # User is not a member or bot can't check
-            logger.info(f"User {user_id} is not a member of channel {chat_id}: {e}")
-            
-            # Get invite link
+            if member.status not in ("left", "kicked", "restricted", None):
+                is_member = True
+        except Exception:
+            is_member = False
+
+        # Create or obtain invite link only when needed
+        if not is_member:
             try:
                 link_obj = await context.bot.create_chat_invite_link(chat_id=chat_id, member_limit=1)
                 invite_link = link_obj.invite_link
-            except Exception as e:
-                logger.error(f"Error creating invite link: {e}")
+            except Exception:
                 try:
                     chat = await context.bot.get_chat(chat_id)
-                    invite_link = chat.invite_link if chat.invite_link else f"https://t.me/{chat.username}"
-                except Exception as e:
-                    logger.error(f"Error getting chat info: {e}")
-                    return True  # Fail-safe
+                    invite_link = getattr(chat, "invite_link", None) or (f"https://t.me/{getattr(chat, 'username', '')}" if getattr(chat, 'username', None) else None)
+                except Exception:
+                    invite_link = None
 
-            # Show force-sub message
-            text = (
+        # Build keyboard: if member show only Verify, else show Join + Verify
+        if is_member:
+            kb = InlineKeyboardMarkup([[InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub")]])
+            prompt = (
+                "🔒 <b>Access Restricted</b>\n\n"
+                "Click Verify to complete access verification."
+            )
+        else:
+            kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("📢 Join Updates Channel", url=invite_link if invite_link else "https://t.me/")],
+                [InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub")]
+            ])
+            prompt = (
                 "🔒 <b>Access Restricted</b>\n\n"
                 "To use this bot, you must join our updates channel.\n\n"
                 "👇 Join first, then click Verify 👇"
             )
 
-            kb = InlineKeyboardMarkup([
-                [InlineKeyboardButton("📢 Join Updates Channel", url=invite_link)],
-                [InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub")]
-            ])
-
-            await send_or_edit(update, text, kb, FORCE_SUB_BANNER)
-            return False
-
-        # User is a member
-        return True
-
+        await send_or_edit(update, prompt, kb, FORCE_SUB_BANNER)
+        return False
     except Exception as e:
         logger.error(f"❌ Force-Sub Error: {e}")
-        return True  # Allow access on error
+        # Fail open: allow access if an unexpected error occurs
+        return True
 
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
