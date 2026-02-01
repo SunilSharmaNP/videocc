@@ -16,7 +16,10 @@ import sys
 from updater import update_from_upstream
 from telegram.error import BadRequest, RetryAfter
 import random
-from database import save_thumbnail, get_thumbnail, delete_thumbnail, has_thumbnail
+from database import (
+    save_thumbnail, get_thumbnail, delete_thumbnail, has_thumbnail,
+    save_dump_channel, get_dump_channel, delete_dump_channel
+)
 
 # Logging
 logging.basicConfig(
@@ -407,18 +410,15 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             elif key == "settings":
                 uid = query.from_user.id
-                thumb_status = "✅ Saved" if has_thumbnail(uid) else "❌ Not Saved"
                 text = (
                     "⚙️ <b>Settings</b>\n\n"
-                    f"🖼 Thumbnail: <b>{thumb_status}</b>\n\n"
-                    "Use buttons below to manage your thumbnail"
+                    "Choose what you want to manage:"
                 )
-                # Add settings buttons
+                # Add settings submenus buttons
                 settings_kb = InlineKeyboardMarkup([
-                    [InlineKeyboardButton("💾 Save Thumbnail", callback_data="thumb_save_info"),
-                     InlineKeyboardButton("👁️ Show Thumbnail", callback_data="thumb_show")],
-                    [InlineKeyboardButton("🗑️ Delete Thumbnail", callback_data="thumb_delete"),
-                     InlineKeyboardButton("⬅️ Back", callback_data="menu_back")]
+                    [InlineKeyboardButton("🖼 Thumbnails", callback_data="submenu_thumbnails"),
+                     InlineKeyboardButton("📁 Dump Channel", callback_data="submenu_dumpchannel")],
+                    [InlineKeyboardButton("⬅️ Back", callback_data="menu_back")]
                 ])
                 try:
                     msg = query.message
@@ -462,6 +462,59 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.error(f"Menu error: {e}", exc_info=True)
         return
     
+    # Handle Thumbnails submenu
+    if query.data == "submenu_thumbnails":
+        await query.answer()
+        uid = query.from_user.id
+        thumb_status = "✅ Saved" if has_thumbnail(uid) else "❌ Not Saved"
+        text = (
+            "🖼 <b>Thumbnails</b>\n\n"
+            f"Status: <b>{thumb_status}</b>\n\n"
+            "Manage your video thumbnails:"
+        )
+        thumb_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("💾 Save Thumbnail", callback_data="thumb_save_info"),
+             InlineKeyboardButton("👁️ Show Thumbnail", callback_data="thumb_show")],
+            [InlineKeyboardButton("🗑️ Delete Thumbnail", callback_data="thumb_delete"),
+             InlineKeyboardButton("⬅️ Back", callback_data="menu_settings")]
+        ])
+        try:
+            msg = query.message
+            if getattr(msg, "photo", None):
+                await msg.edit_caption(text, reply_markup=thumb_kb, parse_mode="HTML")
+            else:
+                await msg.edit_text(text, reply_markup=thumb_kb, parse_mode="HTML")
+        except Exception as e:
+            logger.debug(f"Thumbnails submenu edit error: {e}")
+        return
+    
+    # Handle Dump Channel submenu
+    if query.data == "submenu_dumpchannel":
+        await query.answer()
+        uid = query.from_user.id
+        dump_ch = get_dump_channel(uid)
+        dump_status = f"✅ Set: {dump_ch}" if dump_ch else "❌ Not Set"
+        text = (
+            "📁 <b>Dump Channel</b>\n\n"
+            f"Status: <b>{dump_status}</b>\n\n"
+            "Use a dump channel to store your videos before sending them."
+        )
+        dump_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("➕ Set Dump Channel", callback_data="dump_set_info"),
+             InlineKeyboardButton("👁️ Show Dump Channel", callback_data="dump_show")],
+            [InlineKeyboardButton("🗑️ Delete Dump Channel", callback_data="dump_delete"),
+             InlineKeyboardButton("⬅️ Back", callback_data="menu_settings")]
+        ])
+        try:
+            msg = query.message
+            if getattr(msg, "photo", None):
+                await msg.edit_caption(text, reply_markup=dump_kb, parse_mode="HTML")
+            else:
+                await msg.edit_text(text, reply_markup=dump_kb, parse_mode="HTML")
+        except Exception as e:
+            logger.debug(f"Dump channel submenu edit error: {e}")
+        return
+    
     # Handle thumbnail operations
     if query.data == "thumb_save_info":
         await query.answer()
@@ -474,7 +527,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Your thumbnail will be saved in the database!"
         )
         back_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("⬅️ Back", callback_data="menu_settings")]
+            [InlineKeyboardButton("⬅️ Back", callback_data="submenu_thumbnails")]
         ])
         try:
             msg = query.message
@@ -492,7 +545,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if photo_id:
             text = "👁️ <b>Your Saved Thumbnail</b>"
             back_kb = InlineKeyboardMarkup([
-                [InlineKeyboardButton("⬅️ Back", callback_data="menu_settings")]
+                [InlineKeyboardButton("⬅️ Back", callback_data="submenu_thumbnails")]
             ])
             try:
                 await query.message.delete()
@@ -511,7 +564,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             text = "❌ <b>No Thumbnail Saved</b>\n\nSend a photo first to save a thumbnail."
             back_kb = InlineKeyboardMarkup([
-                [InlineKeyboardButton("⬅️ Back", callback_data="menu_settings")]
+                [InlineKeyboardButton("⬅️ Back", callback_data="submenu_thumbnails")]
             ])
             try:
                 msg = query.message
@@ -530,7 +583,87 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             text = "❌ <b>No Thumbnail to Delete</b>\n\nYou don't have a saved thumbnail."
         back_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("⬅️ Back", callback_data="menu_settings")]
+            [InlineKeyboardButton("⬅️ Back", callback_data="submenu_thumbnails")]
+        ])
+        try:
+            msg = query.message
+            if getattr(msg, "photo", None):
+                await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
+            else:
+                await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
+        except Exception:
+            pass
+        return
+    
+    # Handle dump channel operations
+    if query.data == "dump_set_info":
+        await query.answer()
+        uid = query.from_user.id
+        # Set flag to capture dump channel ID in text handler
+        context.user_data[f"{uid}_setting_dump_channel"] = True
+        
+        text = (
+            "📁 <b>Set Dump Channel</b>\n\n"
+            "<b>How to setup:</b>\n"
+            "1️⃣ Create a private channel on Telegram\n"
+            "2️⃣ Add this bot as admin in that channel\n"
+            "3️⃣ Send me the channel ID (format: -100XXXX...)\n"
+            "4️⃣ I'll save it and send videos there first\n\n"
+            "📤 <b>Then:</b> Send video with cover → sent to dump channel → forwarded to you\n\n"
+            "👇 <b>Send your dump channel ID now:</b>"
+        )
+        back_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("⬅️ Cancel", callback_data="submenu_dumpchannel")]
+        ])
+        try:
+            msg = query.message
+            if getattr(msg, "photo", None):
+                await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
+            else:
+                await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
+        except Exception:
+            pass
+        return
+    
+    if query.data == "dump_show":
+        await query.answer()
+        dump_ch = get_dump_channel(user_id)
+        if dump_ch:
+            text = f"📁 <b>Your Dump Channel ID:</b>\n\n<code>{dump_ch}</code>"
+            back_kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("⬅️ Back", callback_data="submenu_dumpchannel")]
+            ])
+            try:
+                msg = query.message
+                if getattr(msg, "photo", None):
+                    await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
+                else:
+                    await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
+            except Exception:
+                pass
+        else:
+            text = "❌ <b>No Dump Channel Set</b>\n\nUse 'Set Dump Channel' to add one."
+            back_kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("⬅️ Back", callback_data="submenu_dumpchannel")]
+            ])
+            try:
+                msg = query.message
+                if getattr(msg, "photo", None):
+                    await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
+                else:
+                    await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
+            except Exception:
+                pass
+        return
+    
+    if query.data == "dump_delete":
+        await query.answer()
+        if delete_dump_channel(user_id):
+            text = "✅ <b>Dump Channel Deleted</b>\n\nYour dump channel has been removed successfully."
+        else:
+            text = "❌ <b>No Dump Channel to Delete</b>\n\nYou don't have a dump channel set."
+        back_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("⬅️ Back", callback_data="submenu_dumpchannel")]
         ])
         try:
             msg = query.message
@@ -704,7 +837,36 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     media = InputMediaVideo(media=video, caption=new_caption, supports_streaming=True, cover=cover, parse_mode="HTML")
     
     try:
-        await context.bot.edit_message_media(chat_id=update.effective_chat.id, message_id=msg.message_id, media=media)
+        # Check if user has dump channel configured
+        dump_channel = get_dump_channel(user_id)
+        if dump_channel:
+            # Send to dump channel first
+            try:
+                dump_msg = await context.bot.send_video(
+                    chat_id=dump_channel,
+                    video=video,
+                    caption=new_caption,
+                    supports_streaming=True,
+                    parse_mode="HTML",
+                    thumbnail=cover
+                )
+                logger.info(f"✅ Video sent to dump channel {dump_channel} for user {user_id}")
+                # Then send to user
+                await update.message.reply_video(
+                    video=dump_msg.video.file_id,
+                    caption=f"✅ <b>Cover Added & Saved</b>\n\n{new_caption}",
+                    supports_streaming=True,
+                    parse_mode="HTML",
+                    reply_to_message_id=update.message.message_id
+                )
+                await msg.delete()
+            except Exception as e:
+                logger.error(f"Error with dump channel: {e}")
+                # Fallback to direct edit
+                await context.bot.edit_message_media(chat_id=update.effective_chat.id, message_id=msg.message_id, media=media)
+        else:
+            # No dump channel, just edit message
+            await context.bot.edit_message_media(chat_id=update.effective_chat.id, message_id=msg.message_id, media=media)
     except Exception as e:
         await update.message.reply_text(f"❌ Failed to send video with cover:\n{e}")
 
@@ -726,6 +888,54 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
+async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle text messages - for dump channel ID submission"""
+    if not await check_force_sub(update, context):
+        return
+    
+    user_id = update.message.from_user.id
+    text = update.message.text
+    
+    # Check if user is in dump channel setup mode (via context.user_data)
+    if context.user_data.get(f"{user_id}_setting_dump_channel"):
+        # User sending dump channel ID
+        try:
+            # Try to parse as channel ID
+            channel_id = text.strip()
+            if not channel_id.startswith(('-100', '-')):
+                await update.message.reply_text(
+                    "❌ <b>Invalid Channel ID Format</b>\n\n"
+                    "Channel IDs should start with -100\n"
+                    "Example: -1001234567890",
+                    parse_mode="HTML"
+                )
+                return
+            
+            # Save dump channel ID
+            save_dump_channel(user_id, channel_id)
+            context.user_data.pop(f"{user_id}_setting_dump_channel", None)
+            
+            await update.message.reply_text(
+                f"✅ <b>Dump Channel Saved</b>\n\n"
+                f"Channel ID: <code>{channel_id}</code>\n\n"
+                "Now videos with cover will be sent to this channel first!",
+                parse_mode="HTML"
+            )
+            logger.info(f"✅ Dump channel {channel_id} saved for user {user_id}")
+        except Exception as e:
+            logger.error(f"Error saving dump channel: {e}")
+            await update.message.reply_text(f"❌ Error: {e}", parse_mode="HTML")
+        return
+    
+    # For other text messages, just acknowledge
+    await update.message.reply_text(
+        "👋 Hello! Use /start to begin.\n\n"
+        "/help - How to use\n"
+        "/settings - Settings",
+        parse_mode="HTML"
+    )
+
+
 """-----------CALLBAck Hnadlers--------"""
 
 
@@ -745,6 +955,9 @@ def main() -> None:
     # Photo and video handlers (private chats only via filters)
     app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, photo_handler))
     app.add_handler(MessageHandler(filters.VIDEO & filters.ChatType.PRIVATE, video_handler))
+    
+    # Text handler for dump channel ID capture
+    app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, text_handler))
 
     app.add_handler(CommandHandler("start", start, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("help", help_cmd, filters=filters.ChatType.PRIVATE))
