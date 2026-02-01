@@ -596,7 +596,15 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     cover = user_data[user_id]["photo_id"]
     video = update.message.video.file_id
-    media = InputMediaVideo(media=video, caption="✅ Cover Added.", supports_streaming=True, cover=cover)
+    
+    # Get original caption and preserve it
+    original_caption = update.message.caption or ""
+    if original_caption:
+        new_caption = f"{original_caption}"
+    else:
+        new_caption = "✅ Cover Added."
+    
+    media = InputMediaVideo(media=video, caption=new_caption, supports_streaming=True, cover=cover, parse_mode="HTML")
     
     try:
         await context.bot.edit_message_media(chat_id=update.effective_chat.id, message_id=msg.message_id, media=media)
