@@ -266,12 +266,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Check if user is member, admin, or creator
             if member.status in (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR):
                 verified_users.add(user_id)
-                await query.answer("✅ Membership verified!", show_alert=False)
-                # Auto-start after verification
+                await query.answer("✅ Membership verified! Opening home menu...", show_alert=False)
+                # Show home menu directly
                 await start(update, context)
                 return
             else:
-                await query.answer("❌ Please join the channel first, then tap Verify again.", show_alert=True)
+                await query.answer("❌ Please join the channel first using the 'Join Updates Channel' button, then tap Verify again.", show_alert=True)
                 return
         except Exception as e:
             logger.error(f"❌ Verify button check error: {e}")
@@ -409,16 +409,39 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     kb = InlineKeyboardMarkup(kb_rows)
     banner = get_force_banner() if 'get_force_banner' in globals() else None
-    if banner:
-        try:
-            if isinstance(banner, str) and os.path.isfile(banner):
-                await update.message.reply_photo(photo=InputFile(banner), caption=text, reply_markup=kb, parse_mode="HTML")
-            else:
-                await update.message.reply_photo(photo=banner, caption=text, reply_markup=kb, parse_mode="HTML")
-            return
-        except Exception:
-            pass
-    await update.message.reply_text(text, reply_markup=kb, parse_mode="HTML")
+    
+    # Handle both callback_query and regular message
+    if update.callback_query:
+        msg = update.callback_query.message
+        if banner:
+            try:
+                if isinstance(banner, str) and os.path.isfile(banner):
+                    photo = InputFile(banner)
+                else:
+                    photo = banner
+                if getattr(msg, "photo", None):
+                    await msg.edit_caption(caption=text, reply_markup=kb, parse_mode="HTML")
+                else:
+                    try:
+                        await msg.delete()
+                    except Exception:
+                        pass
+                    await msg.chat.send_photo(photo=photo, caption=text, reply_markup=kb, parse_mode="HTML")
+            except Exception:
+                await msg.edit_text(text, reply_markup=kb, parse_mode="HTML")
+        else:
+            await msg.edit_text(text, reply_markup=kb, parse_mode="HTML")
+    else:
+        if banner:
+            try:
+                if isinstance(banner, str) and os.path.isfile(banner):
+                    await update.message.reply_photo(photo=InputFile(banner), caption=text, reply_markup=kb, parse_mode="HTML")
+                else:
+                    await update.message.reply_photo(photo=banner, caption=text, reply_markup=kb, parse_mode="HTML")
+                return
+            except Exception:
+                pass
+        await update.message.reply_text(text, reply_markup=kb, parse_mode="HTML")
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
