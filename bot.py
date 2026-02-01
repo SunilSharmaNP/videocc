@@ -164,8 +164,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not query or query.data != "check_fsub":
         return
 
-    # Answer the callback immediately
-    await query.answer()
+    # Defer answering until we know the result so user sees a clear message
 
     user_id = query.from_user.id
     
@@ -179,9 +178,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await msg.edit_caption(text, parse_mode="HTML")
             else:
                 await msg.edit_text(text, parse_mode="HTML")
+            await query.answer("Access granted ✅", show_alert=False)
         except Exception:
             await context.bot.send_message(chat_id=query.message.chat.id, text="✅ <b>Access Granted</b>\n\nYou can now use the bot.", parse_mode="HTML")
-        return
+            await query.answer("Access granted ✅", show_alert=False)
         return
 
     try:
@@ -191,6 +191,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
             if member.status in ("left", "kicked", "restricted", None):
                 logger.info(f"User {user_id} still not a member: {member.status}")
+                # Inform user clearly
                 await query.answer("❌ You haven't joined the channel yet!", show_alert=True)
                 return
 
@@ -206,9 +207,16 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await msg.edit_caption(success_text, parse_mode="HTML")
                 else:
                     await msg.edit_text(success_text, parse_mode="HTML")
+                # Give a short toast confirmation as well
+                await query.answer("Access verified ✅", show_alert=False)
             except Exception as e:
                 logger.error(f"Error editing message: {e}")
-                await context.bot.send_message(chat_id=query.message.chat.id, text=success_text, parse_mode="HTML")
+                # If editing failed, send a new message and alert user
+                try:
+                    await context.bot.send_message(chat_id=query.message.chat.id, text=success_text, parse_mode="HTML")
+                except Exception:
+                    pass
+                await query.answer("Access verified ✅", show_alert=False)
             return
         except Exception as e:
             logger.info(f"User {user_id} still not a member or error: {e}")
