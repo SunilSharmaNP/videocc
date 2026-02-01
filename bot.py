@@ -16,6 +16,7 @@ import sys
 from updater import update_from_upstream
 from telegram.error import BadRequest, RetryAfter
 import random
+from database import save_thumbnail, get_thumbnail, delete_thumbnail, has_thumbnail
 
 # Logging
 logging.basicConfig(
@@ -63,8 +64,6 @@ def get_force_banner():
     return FALLBACK_BANNER
 
 
-# In-memory per-user thumbnail storage (keeps only file_ids)
-user_data = {}
 # In-memory set of users who completed the verify step
 verified_users = set()
 
@@ -408,12 +407,28 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             elif key == "settings":
                 uid = query.from_user.id
-                thumb_status = "✅ Set" if uid in user_data else "❌ Not Set"
+                thumb_status = "✅ Saved" if has_thumbnail(uid) else "❌ Not Saved"
                 text = (
                     "⚙️ <b>Settings</b>\n\n"
                     f"🖼 Thumbnail: <b>{thumb_status}</b>\n\n"
-                    "Use /remove to delete thumbnail"
+                    "Use buttons below to manage your thumbnail"
                 )
+                # Add settings buttons
+                settings_kb = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("💾 Save Thumbnail", callback_data="thumb_save_info"),
+                     InlineKeyboardButton("👁️ Show Thumbnail", callback_data="thumb_show")],
+                    [InlineKeyboardButton("🗑️ Delete Thumbnail", callback_data="thumb_delete"),
+                     InlineKeyboardButton("⬅️ Back", callback_data="menu_back")]
+                ])
+                try:
+                    msg = query.message
+                    if getattr(msg, "photo", None):
+                        await msg.edit_caption(text, reply_markup=settings_kb, parse_mode="HTML")
+                    else:
+                        await msg.edit_text(text, reply_markup=settings_kb, parse_mode="HTML")
+                except Exception as e:
+                    logger.debug(f"Settings menu edit error: {e}")
+                return
             elif key == "developer":
                 dev_contact = f"https://t.me/{OWNER_USERNAME}" if OWNER_USERNAME else f"tg://user?id={OWNER_ID}"
                 text = (
@@ -427,23 +442,104 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "No information available for this menu."
                 )
             
-            # Add back button to all menus
+            # Add back button to all menus (except settings which has its own)
+            if key != "settings":
+                back_kb = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("⬅️ Back", callback_data="menu_back")]
+                ])
+                
+                # Try to edit original message's caption/text first
+                try:
+                    msg = query.message
+                    if getattr(msg, "photo", None):
+                        await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
+                    else:
+                        await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
+                except Exception as e:
+                    logger.debug(f"Menu edit error: {e}")
+                    await context.bot.send_message(chat_id=query.message.chat.id, text=text, reply_markup=back_kb, parse_mode="HTML")
+        except Exception as e:
+            logger.error(f"Menu error: {e}", exc_info=True)
+        return
+    
+    # Handle thumbnail operations
+    if query.data == "thumb_save_info":
+        await query.answer()
+        text = (
+            "💾 <b>Save Thumbnail</b>\n\n"
+            "To save a thumbnail:\n"
+            "1️⃣ Send a photo to the bot\n"
+            "2️⃣ The thumbnail will be saved automatically\n"
+            "3️⃣ Later, send a video to apply the cover\n\n"
+            "Your thumbnail will be saved in the database!"
+        )
+        back_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("⬅️ Back", callback_data="menu_settings")]
+        ])
+        try:
+            msg = query.message
+            if getattr(msg, "photo", None):
+                await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
+            else:
+                await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
+        except Exception:
+            pass
+        return
+    
+    if query.data == "thumb_show":
+        await query.answer()
+        photo_id = get_thumbnail(user_id)
+        if photo_id:
+            text = "👁️ <b>Your Saved Thumbnail</b>"
             back_kb = InlineKeyboardMarkup([
-                [InlineKeyboardButton("⬅️ Back", callback_data="menu_back")]
+                [InlineKeyboardButton("⬅️ Back", callback_data="menu_settings")]
             ])
-            
-            # Try to edit original message's caption/text first
+            try:
+                await query.message.delete()
+            except Exception:
+                pass
+            try:
+                await context.bot.send_photo(
+                    chat_id=user_id,
+                    photo=photo_id,
+                    caption=text,
+                    reply_markup=back_kb,
+                    parse_mode="HTML"
+                )
+            except Exception as e:
+                logger.error(f"Error sending thumbnail: {e}")
+        else:
+            text = "❌ <b>No Thumbnail Saved</b>\n\nSend a photo first to save a thumbnail."
+            back_kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("⬅️ Back", callback_data="menu_settings")]
+            ])
             try:
                 msg = query.message
                 if getattr(msg, "photo", None):
                     await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
                 else:
                     await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
-            except Exception as e:
-                logger.debug(f"Menu edit error: {e}")
-                await context.bot.send_message(chat_id=query.message.chat.id, text=text, reply_markup=back_kb, parse_mode="HTML")
-        except Exception as e:
-            logger.error(f"Menu error: {e}", exc_info=True)
+            except Exception:
+                pass
+        return
+    
+    if query.data == "thumb_delete":
+        await query.answer()
+        if delete_thumbnail(user_id):
+            text = "✅ <b>Thumbnail Deleted</b>\n\nYour thumbnail has been removed successfully."
+        else:
+            text = "❌ <b>No Thumbnail to Delete</b>\n\nYou don't have a saved thumbnail."
+        back_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("⬅️ Back", callback_data="menu_settings")]
+        ])
+        try:
+            msg = query.message
+            if getattr(msg, "photo", None):
+                await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
+            else:
+                await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
+        except Exception:
+            pass
         return
 
     logger.warning(f"⚠️ Unknown callback: {query.data}")
@@ -574,8 +670,7 @@ async def remover(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
     user_id = update.message.from_user.id
-    if user_id in user_data:
-        user_data.pop(user_id, None)
+    if delete_thumbnail(user_id):
         return await update.message.reply_text("✅ Thumbnail Removed.", reply_to_message_id=update.message.message_id)
     await update.message.reply_text("⚠️ First Add A Thumbnail.", reply_to_message_id=update.message.message_id)
 
@@ -583,24 +678,26 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
     user_id = update.message.from_user.id
-    user_data[user_id] = {"photo_id": update.message.photo[-1].file_id}
+    photo_id = update.message.photo[-1].file_id
+    save_thumbnail(user_id, photo_id)
+    logger.info(f"✅ Thumbnail saved to MongoDB for user {user_id}")
     await update.message.reply_text("✅ New Thumbnail Saved.", reply_to_message_id=update.message.message_id)
 
 async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
     user_id = update.message.from_user.id
-    if user_id not in user_data or "photo_id" not in user_data[user_id]:
+    cover = get_thumbnail(user_id)
+    if not cover:
         return await update.message.reply_text("❌ Send A Photo First.", reply_to_message_id=update.message.message_id)
     msg = await update.message.reply_text("🔄 Adding Cover Please Wait...", reply_to_message_id=update.message.message_id)
     
-    cover = user_data[user_id]["photo_id"]
     video = update.message.video.file_id
     
     # Get original caption and preserve it
     original_caption = update.message.caption or ""
     if original_caption:
-        new_caption = f"{original_caption}"
+        new_caption = f"{original_caption}\n\n✅ Cover Added."
     else:
         new_caption = "✅ Cover Added."
     
