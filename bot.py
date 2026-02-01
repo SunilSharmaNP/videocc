@@ -116,47 +116,30 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if user_id in verified_users:
         return True
 
-    # Determine membership to build appropriate keyboard
-    is_member = False
+    # Always require explicit Verify click — build keyboard with Join + Verify
     invite_link = None
     try:
         chat_id = int(FORCE_SUB_CHANNEL_ID) if FORCE_SUB_CHANNEL_ID.isdigit() else FORCE_SUB_CHANNEL_ID
         try:
-            member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
-            if member.status not in ("left", "kicked", "restricted", None):
-                is_member = True
+            link_obj = await context.bot.create_chat_invite_link(chat_id=chat_id, member_limit=1)
+            invite_link = link_obj.invite_link
         except Exception:
-            is_member = False
-
-        # Create or obtain invite link only when needed
-        if not is_member:
             try:
-                link_obj = await context.bot.create_chat_invite_link(chat_id=chat_id, member_limit=1)
-                invite_link = link_obj.invite_link
+                chat = await context.bot.get_chat(chat_id)
+                invite_link = getattr(chat, "invite_link", None) or (f"https://t.me/{getattr(chat, 'username', '')}" if getattr(chat, 'username', None) else None)
             except Exception:
-                try:
-                    chat = await context.bot.get_chat(chat_id)
-                    invite_link = getattr(chat, "invite_link", None) or (f"https://t.me/{getattr(chat, 'username', '')}" if getattr(chat, 'username', None) else None)
-                except Exception:
-                    invite_link = None
+                invite_link = None
 
-        # Build keyboard: if member show only Verify, else show Join + Verify
-        if is_member:
-            kb = InlineKeyboardMarkup([[InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub")]])
-            prompt = (
-                "🔒 <b>Access Restricted</b>\n\n"
-                "Click Verify to complete access verification."
-            )
-        else:
-            kb = InlineKeyboardMarkup([
-                [InlineKeyboardButton("📢 Join Updates Channel", url=invite_link if invite_link else "https://t.me/")],
-                [InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub")]
-            ])
-            prompt = (
-                "🔒 <b>Access Restricted</b>\n\n"
-                "To use this bot, you must join our updates channel.\n\n"
-                "👇 Join first, then click Verify 👇"
-            )
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📢 Join Updates Channel", url=invite_link if invite_link else "https://t.me/")],
+            [InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub")]
+        ])
+
+        prompt = (
+            "🔒 <b>Access Restricted</b>\n\n"
+            "To use this bot, you must join our updates channel.\n\n"
+            "👇 Join first, then click Verify 👇"
+        )
 
         await send_or_edit(update, prompt, kb, FORCE_SUB_BANNER)
         return False
@@ -222,6 +205,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 else:
                     await msg.edit_text(success_text, parse_mode="HTML")
                 # Give a short toast confirmation as well
+                # mark user as verified so future commands won't prompt
+                verified_users.add(user_id)
                 await query.answer("Access verified ✅", show_alert=False)
             except Exception as e:
                 logger.error(f"Error editing message: {e}")
@@ -230,6 +215,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await context.bot.send_message(chat_id=query.message.chat.id, text=success_text, parse_mode="HTML")
                 except Exception:
                     pass
+                verified_users.add(user_id)
                 await query.answer("Access verified ✅", show_alert=False)
             return
         except Exception as e:
