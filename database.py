@@ -393,10 +393,4 @@ def log_dump_channel_removed(user_id: int, username: str) -> dict:
     action = "🗑️ Dump Channel Removed"
     logger.info(f"✅ {action} - {username} ({user_id})")
     return create_log_entry(user_id, username, action)
-        return {
-            "total_users": 0,
-            "banned_users": 0,
-            "users_with_thumbnail": 0,
-            "users_with_dump_channel": 0
-        }
 
