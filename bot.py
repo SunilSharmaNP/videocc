@@ -13,7 +13,7 @@ from telegram.ext import (
 from config import config
 import sys
 from updater import update_from_upstream
-from telegram.error import BadRequest, FloodWait
+from telegram.error import BadRequest, RetryAfter
 import random
 
 # Logging
@@ -115,15 +115,15 @@ async def send_or_edit(update: Update, text, reply_markup=None, force_banner=Non
 
 
 async def get_invite_link(bot, chat_id):
-    """Create or return a chat invite link with FloodWait handling."""
+    """Create or return a chat invite link with rate-limit retry handling."""
     try:
         link_obj = await bot.create_chat_invite_link(chat_id=chat_id, member_limit=1)
         # Different objects may expose either 'invite_link' attribute or be a string
         return getattr(link_obj, "invite_link", link_obj)
-    except FloodWait as e:
-        # support multiple attribute names for the wait duration
-        secs = getattr(e, "value", None) or getattr(e, "x", None) or getattr(e, "retry_after", None) or 30
-        logger.info(f"FloodWait while creating invite link: sleeping {secs}s")
+    except RetryAfter as e:
+        # python-telegram-bot RetryAfter provides `retry_after` in seconds
+        secs = getattr(e, "retry_after", None) or 30
+        logger.info(f"Rate limited while creating invite link: sleeping {secs}s")
         await asyncio.sleep(secs)
         return await get_invite_link(bot, chat_id)
     except Exception as e:
@@ -336,9 +336,9 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             try:
                 member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
-            except FloodWait as e:
-                secs = getattr(e, "value", None) or getattr(e, "x", None) or getattr(e, "retry_after", None) or 30
-                logger.info(f"FloodWait while checking membership: sleeping {secs}s")
+            except RetryAfter as e:
+                secs = getattr(e, "retry_after", None) or 30
+                logger.info(f"Rate limited while checking membership: sleeping {secs}s")
                 await asyncio.sleep(secs)
                 member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
 
