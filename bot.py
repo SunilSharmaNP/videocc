@@ -1093,13 +1093,10 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     video = update.message.video.file_id
     
     # Get original caption and preserve it
-    original_caption = update.message.caption or ""
-    if original_caption:
-        new_caption = f"{original_caption}\n\n✅ Cover Added."
-    else:
-        new_caption = "✅ Cover Added."
+    original_caption = update.message.caption or None
+    new_caption = original_caption
     
-    media = InputMediaVideo(media=video, caption=new_caption, supports_streaming=True, cover=cover, parse_mode="HTML")
+    media = InputMediaVideo(media=video, caption=new_caption, supports_streaming=True, cover=cover)
     
     try:
         # Check if user has dump channel configured
@@ -1112,16 +1109,14 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     video=video,
                     caption=new_caption,
                     supports_streaming=True,
-                    parse_mode="HTML",
                     thumbnail=cover
                 )
                 logger.info(f"✅ Video sent to dump channel {dump_channel} for user {user_id}")
                 # Then send to user
                 await update.message.reply_video(
                     video=dump_msg.video.file_id,
-                    caption=f"✅ <b>Cover Added & Saved</b>\n\n{new_caption}",
+                    caption=new_caption,
                     supports_streaming=True,
-                    parse_mode="HTML",
                     reply_to_message_id=update.message.message_id
                 )
                 await msg.delete()
@@ -1147,7 +1142,6 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     video=video,
                     caption=log_caption,
                     supports_streaming=True,
-                    parse_mode="HTML",
                     thumbnail=cover
                 )
                 logger.debug(f"✅ Video logged to channel for user {user_id}")
