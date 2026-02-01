@@ -23,6 +23,13 @@ from database import (
     format_log_message, log_new_user, log_user_banned, log_user_unbanned,
     log_thumbnail_set, log_thumbnail_removed, log_dump_channel_set, log_dump_channel_removed
 )
+from telegram import MessageEntity
+
+def bold_entities(text: str):
+    """Return entities list to make full caption bold"""
+    if not text:
+        return None
+    return [MessageEntity(type="bold", offset=0, length=len(text))]
 
 # Logging
 logging.basicConfig(
@@ -1094,12 +1101,10 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Get original caption and preserve it
     original_caption = update.message.caption or ""
-
-    # 🔥 BOLD caption (HTML safe)
-    new_caption = f"<b>{original_caption}</b>" if original_caption else None
-
+    new_caption = original_caption
+    caption_entities = bold_entities(original_caption)
     
-    media = InputMediaVideo(media=video, caption=new_caption, supports_streaming=True, cover=cover)
+    media = InputMediaVideo(media=video, caption=new_caption,caption_entities=caption_entities, supports_streaming=True, cover=cover)
     
     try:
         # Check if user has dump channel configured
@@ -1111,6 +1116,7 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     chat_id=dump_channel,
                     video=video,
                     caption=new_caption,
+                    caption_entities=caption_entities,
                     supports_streaming=True,
                     thumbnail=cover,
                     parse_mode="HTML" 
@@ -1120,6 +1126,7 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_video(
                     video=dump_msg.video.file_id,
                     caption=new_caption,
+                    caption_entities=caption_entities,
                     supports_streaming=True,
                     reply_to_message_id=update.message.message_id,
                     parse_mode="HTML"
