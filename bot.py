@@ -225,7 +225,18 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Auto-recheck membership after 30s
         try:
             member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
-            if member.status in (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR):
+            # Check status - use both OWNER and CREATOR for compatibility
+            allowed_statuses = (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR)
+            # Try to add OWNER or CREATOR if they exist
+            try:
+                allowed_statuses = allowed_statuses + (ChatMemberStatus.OWNER,)
+            except AttributeError:
+                try:
+                    allowed_statuses = allowed_statuses + (ChatMemberStatus.CREATOR,)
+                except AttributeError:
+                    pass
+            
+            if member.status in allowed_statuses:
                 verified_users.add(user_id)
                 return True
         except Exception as e:
@@ -332,6 +343,36 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data.startswith("menu_"):
         key = query.data.split("menu_")[1]
         logger.info(f"📋 Menu callback: {key} for user {user_id}")
+        await query.answer()
+        
+        # Handle back button - return to home menu
+        if key == "back":
+            text = (
+                "👋 <b>Welcome to Instant Cover Bot</b>\n\n"
+                "📸 Send a <b>photo</b> to set thumbnail\n"
+                "🎥 Send a <b>video</b> to get it with cover\n\n"
+                "🧩 Commands:\n"
+                "/help – How to use bot\n"
+                "/settings – Bot settings\n"
+                "/about – About this bot"
+            )
+            kb_rows = [
+                [InlineKeyboardButton("❓ Help", callback_data="menu_help"),
+                 InlineKeyboardButton("ℹ️ About", callback_data="menu_about")],
+                [InlineKeyboardButton("⚙️ Settings", callback_data="menu_settings"),
+                 InlineKeyboardButton("👨‍💻 Developer", callback_data="menu_developer")],
+            ]
+            kb = InlineKeyboardMarkup(kb_rows)
+            try:
+                msg = query.message
+                if getattr(msg, "photo", None):
+                    await msg.edit_caption(text, reply_markup=kb, parse_mode="HTML")
+                else:
+                    await msg.edit_text(text, reply_markup=kb, parse_mode="HTML")
+            except Exception as e:
+                logger.debug(f"Back button message edit error: {e}")
+            return
+        
         try:
             if key == "help":
                 text = (
@@ -372,23 +413,24 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "ℹ️ <b>Info</b>\n\n"
                     "No information available for this menu."
                 )
+            
+            # Add back button to all menus
+            back_kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton("⬅️ Back", callback_data="menu_back")]
+            ])
+            
             # Try to edit original message's caption/text first
             try:
                 msg = query.message
                 if getattr(msg, "photo", None):
-                    await msg.edit_caption(text, parse_mode="HTML")
+                    await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
                 else:
-                    await msg.edit_text(text, parse_mode="HTML")
+                    await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
             except Exception as e:
-                logger.error(f"Edit error: {e}")
-                await context.bot.send_message(chat_id=query.message.chat.id, text=text, parse_mode="HTML")
-            await query.answer()
+                logger.debug(f"Menu edit error: {e}")
+                await context.bot.send_message(chat_id=query.message.chat.id, text=text, reply_markup=back_kb, parse_mode="HTML")
         except Exception as e:
             logger.error(f"Menu error: {e}", exc_info=True)
-            try:
-                await query.answer("An error occurred.", show_alert=True)
-            except Exception:
-                pass
         return
 
     logger.warning(f"⚠️ Unknown callback: {query.data}")
