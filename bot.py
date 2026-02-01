@@ -185,6 +185,7 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         kb_rows = []
         kb_rows.append([InlineKeyboardButton("📢 Join Updates Channel", url=invite_link if invite_link else "https://t.me/")])
         kb_rows.append([
+            InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub"),
             InlineKeyboardButton("✖️ Close", callback_data="close_banner")
         ])
         if OWNER_USERNAME:
@@ -244,6 +245,41 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Defer further responses until we know the result so user sees a clear message
 
     user_id = query.from_user.id
+    
+    # Handle explicit verify button click
+    if query.data == "check_fsub":
+        try:
+            await query.answer("🔍 Checking membership...", show_alert=False)
+        except Exception:
+            pass
+
+        try:
+            chat_id = int(FORCE_SUB_CHANNEL_ID) if str(FORCE_SUB_CHANNEL_ID).isdigit() else FORCE_SUB_CHANNEL_ID
+        except Exception:
+            logger.error(f"Invalid FORCE_SUB_CHANNEL_ID: {FORCE_SUB_CHANNEL_ID}")
+            verified_users.add(user_id)
+            await start(update, context)
+            return
+
+        try:
+            member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+            # Check if user is member, admin, or creator
+            if member.status in (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR):
+                verified_users.add(user_id)
+                await query.answer("✅ Membership verified!", show_alert=False)
+                # Auto-start after verification
+                await start(update, context)
+                return
+            else:
+                await query.answer("❌ Please join the channel first, then tap Verify again.", show_alert=True)
+                return
+        except Exception as e:
+            logger.error(f"❌ Verify button check error: {e}")
+            # Fail open - let user proceed
+            verified_users.add(user_id)
+            await query.answer("✅ Access granted!", show_alert=False)
+            await start(update, context)
+            return
     
     # Handle other callback actions first
     if query.data == "close_banner":
@@ -334,23 +370,15 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Check membership (for any other callback needing verification)
     if not FORCE_SUB_CHANNEL_ID:
-        # No force-sub configured — grant access and update the original message
+        # No force-sub configured — grant access
         try:
-            msg = query.message
-            text = "✅ <b>Access Granted</b>\n\nYou can now use the bot."
-            if getattr(msg, "photo", None):
-                await msg.edit_caption(text, parse_mode="HTML")
-            else:
-                await msg.edit_text(text, parse_mode="HTML")
             await query.answer("Access granted ✅", show_alert=False)
         except Exception:
-            await context.bot.send_message(chat_id=query.message.chat.id, text="✅ <b>Access Granted</b>\n\nYou can now use the bot.", parse_mode="HTML")
-            await query.answer("Access granted ✅", show_alert=False)
+            pass
         return
 
     try:
         chat_id = int(FORCE_SUB_CHANNEL_ID) if str(FORCE_SUB_CHANNEL_ID).isdigit() else FORCE_SUB_CHANNEL_ID
-        await query.answer("Membership verified via auto-check. Proceed!", show_alert=False)
         verified_users.add(user_id)
         return
     except Exception as e:
