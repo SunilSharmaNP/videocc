@@ -231,27 +231,36 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle callback query for force-sub verification"""
     query = update.callback_query
-    if not query or not query.data:
+    
+    logger.info(f"🔵 CALLBACK HANDLER TRIGGERED | Query Data: {query.data if query else 'NO QUERY'}")
+    
+    if not query:
+        logger.error("❌ Query is None!")
+        return
+    
+    if not query.data:
+        logger.error("❌ Query data is None!")
         return
 
-    # Acknowledge callback immediately so user sees the button press
+    # Acknowledge callback immediately with proper arguments
     try:
-        await query.answer()
-    except Exception:
+        await query.answer(text="Processing...", show_alert=False)
+        logger.info(f"✅ Query acknowledged: {query.data}")
+    except Exception as e:
+        logger.error(f"❌ Failed to answer query: {e}")
         pass
 
-    logger.info(f"Received callback: {query.data} from {query.from_user.id}")
-
-    # Defer further responses until we know the result so user sees a clear message
+    logger.info(f"📨 Received callback: {query.data} from {query.from_user.id}")
 
     user_id = query.from_user.id
     
     # Handle explicit verify button click
     if query.data == "check_fsub":
+        logger.info(f"🔍 Processing verify button for user {user_id}")
         try:
             await query.answer("🔍 Checking membership...", show_alert=False)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Query answer error: {e}")
 
         try:
             chat_id = int(FORCE_SUB_CHANNEL_ID) if str(FORCE_SUB_CHANNEL_ID).isdigit() else FORCE_SUB_CHANNEL_ID
@@ -263,18 +272,21 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         try:
             member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
+            logger.info(f"✅ Member status: {member.status}")
             # Check if user is member, admin, or creator
             if member.status in (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR):
                 verified_users.add(user_id)
                 await query.answer("✅ Membership verified! Opening home menu...", show_alert=False)
+                logger.info(f"✅ Verified user {user_id}, opening home menu")
                 # Show home menu directly
                 await start(update, context)
                 return
             else:
                 await query.answer("❌ Please join the channel first using the 'Join Updates Channel' button, then tap Verify again.", show_alert=True)
+                logger.warning(f"❌ User {user_id} not member yet")
                 return
         except Exception as e:
-            logger.error(f"❌ Verify button check error: {e}")
+            logger.error(f"❌ Verify button check error: {e}", exc_info=True)
             # Fail open - let user proceed
             verified_users.add(user_id)
             await query.answer("✅ Access granted!", show_alert=False)
@@ -283,10 +295,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Handle other callback actions first
     if query.data == "close_banner":
+        logger.info(f"❌ Close banner for user {user_id}")
         try:
             await query.message.delete()
             await query.answer("Closed", show_alert=False)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Close error: {e}")
             try:
                 await query.message.edit_text("Closed", parse_mode="HTML")
             except Exception:
@@ -298,19 +312,21 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if query.data == "contact_owner":
+        logger.info(f"📞 Contact owner for user {user_id}")
         try:
             if OWNER_USERNAME:
                 await context.bot.send_message(chat_id=query.message.chat_id, text=f"Contact owner: https://t.me/{OWNER_USERNAME}")
             else:
                 await context.bot.send_message(chat_id=query.message.chat_id, text="Owner contact not configured.")
             await query.answer()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Contact error: {e}")
         return
 
     # Menu callbacks: show help/about/settings/developer inline
     if query.data.startswith("menu_"):
         key = query.data.split("menu_")[1]
+        logger.info(f"📋 Menu callback: {key} for user {user_id}")
         try:
             if key == "help":
                 text = (
@@ -358,32 +374,19 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await msg.edit_caption(text, parse_mode="HTML")
                 else:
                     await msg.edit_text(text, parse_mode="HTML")
-            except Exception:
+            except Exception as e:
+                logger.error(f"Edit error: {e}")
                 await context.bot.send_message(chat_id=query.message.chat.id, text=text, parse_mode="HTML")
             await query.answer()
-        except Exception:
+        except Exception as e:
+            logger.error(f"Menu error: {e}", exc_info=True)
             try:
                 await query.answer("An error occurred.", show_alert=True)
             except Exception:
                 pass
         return
 
-    # Check membership (for any other callback needing verification)
-    if not FORCE_SUB_CHANNEL_ID:
-        # No force-sub configured — grant access
-        try:
-            await query.answer("Access granted ✅", show_alert=False)
-        except Exception:
-            pass
-        return
-
-    try:
-        chat_id = int(FORCE_SUB_CHANNEL_ID) if str(FORCE_SUB_CHANNEL_ID).isdigit() else FORCE_SUB_CHANNEL_ID
-        verified_users.add(user_id)
-        return
-    except Exception as e:
-        logger.error(f"❌ Callback Error: {e}")
-        await query.answer("❌ An error occurred. Please try again.", show_alert=True)
+    logger.warning(f"⚠️ Unknown callback: {query.data}")
 
 
 """---------------------- Menus--------------------- """
@@ -557,6 +560,13 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main() -> None:
     app = Application.builder().token(TOKEN).build()
 
+    # Global error handler
+    async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Log all errors"""
+        logger.error(f"🔴 ERROR: {context.error}", exc_info=context.error)
+
+    app.add_error_handler(error_handler)
+
     # Command to remove stored thumbnail
     app.add_handler(CommandHandler("remove", remover, filters=filters.ChatType.PRIVATE))
 
@@ -571,10 +581,10 @@ def main() -> None:
     app.add_handler(CommandHandler("restart", restart, filters=filters.ChatType.PRIVATE))
     
     # Register a general callback handler (handles verify, close, contact, etc.)
+    # IMPORTANT: This should be registered LAST before error handler
     app.add_handler(CallbackQueryHandler(callback_handler))
 
-
-
+    logger.info("✅ All handlers registered")
     logger.info("Bot starting (polling)")
     app.run_polling()
 
