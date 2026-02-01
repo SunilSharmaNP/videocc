@@ -283,9 +283,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.info(f"✅ Member status: {member.status}")
             
             # Check if user is member, admin, or owner
-            # Use both OWNER and CREATOR for compatibility
             allowed_statuses = (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR)
-            # Try to add OWNER or CREATOR if they exist
             try:
                 allowed_statuses = allowed_statuses + (ChatMemberStatus.OWNER,)
             except AttributeError:
@@ -295,19 +293,20 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     pass
             
             if member.status in allowed_statuses:
+                # User joined! Verify instantly and show home menu
                 verified_users.add(user_id)
-                await query.answer("✅ Membership verified!", show_alert=False)
-                logger.info(f"✅ Verified user {user_id}, opening home menu")
-                # Show home menu directly
+                await query.answer("✅ Verified! Opening home menu...", show_alert=False)
+                logger.info(f"✅ User {user_id} verified, opening home menu instantly")
                 await start(update, context)
                 return
             else:
-                await query.answer("❌ Please join the channel first, then tap Verify again.", show_alert=True)
-                logger.warning(f"❌ User {user_id} not member yet. Status: {member.status}")
+                # User not member - show alert
+                await query.answer("❌ You haven't joined the channel yet!\n\nClick 'Join Updates Channel' button first, then tap Verify.", show_alert=True)
+                logger.warning(f"❌ User {user_id} not member. Status: {member.status}")
                 return
         except Exception as e:
             logger.error(f"❌ Verify button check error: {e}", exc_info=True)
-            # Fail open - let user proceed
+            # Fail open
             verified_users.add(user_id)
             await query.answer("✅ Access granted!", show_alert=False)
             await start(update, context)
@@ -443,8 +442,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """---------------------- Menus--------------------- """
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Check force-sub first
     if not await check_force_sub(update, context):
+        logger.warning(f"❌ User {update.effective_user.id} blocked by force-sub check")
         return
+    
     text = (
         "👋 <b>Welcome to Instant Cover Bot</b>\n\n"
         "📸 Send a <b>photo</b> to set thumbnail\n"
