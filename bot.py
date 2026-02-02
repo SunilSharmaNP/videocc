@@ -1112,15 +1112,30 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if dump_channel:
             # Send to dump channel first
             try:
-                dump_msg = await context.bot.send_video(
-                    chat_id=dump_channel,
-                    video=video,
-                    caption=new_caption,
-                    caption_entities=caption_entities,
-                    supports_streaming=True,
-                    thumbnail=cover,
-                    parse_mode="HTML" 
+                # 1️⃣ USER MESSAGE – ALWAYS FIRST
+                await context.bot.edit_message_media(
+                    chat_id=update.effective_chat.id,
+                    message_id=msg.message_id,
+                    media=InputMediaVideo(
+                        media=video,
+                        caption=new_caption,
+                        caption_entities=caption_entities,
+                        supports_streaming=True,
+                        cover=cover
+                    )
                 )
+
+                # 2️⃣ DUMP CHANNEL – BACKUP ONLY
+                dump_channel = get_dump_channel(user_id)
+                if dump_channel:
+                    await context.bot.send_video(
+                        chat_id=dump_channel,
+                        video=video,
+                        caption=new_caption,
+                        supports_streaming=True
+                        # ❌ thumbnail mat bhejo
+                        # ❌ entities important nahi
+                    )
                 logger.info(f"✅ Video sent to dump channel {dump_channel} for user {user_id}")
                 # Then send to user
                 await update.message.reply_video(
