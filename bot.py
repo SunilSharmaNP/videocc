@@ -18,10 +18,9 @@ from telegram.error import BadRequest, RetryAfter
 import random
 from database import (
     save_thumbnail, get_thumbnail, delete_thumbnail, has_thumbnail,
-    save_dump_channel, get_dump_channel, delete_dump_channel,
     ban_user, unban_user, is_user_banned, get_total_users, get_banned_users_count, get_stats,
     format_log_message, log_new_user, log_user_banned, log_user_unbanned,
-    log_thumbnail_set, log_thumbnail_removed, log_dump_channel_set, log_dump_channel_removed
+    log_thumbnail_set, log_thumbnail_removed
 )
 from telegram import MessageEntity
 
@@ -65,7 +64,6 @@ except Exception:
 # Final banner env value (may be URL) or local fallback
 FORCE_SUB_BANNER = FORCE_SUB_BANNER_URL or FALLBACK_BANNER
 
-
 def get_force_banner():
     """Return a banner URL or local file path. Prefer env URL; else pick random local image."""
     if FORCE_SUB_BANNER_URL:
@@ -81,9 +79,7 @@ def get_force_banner():
 # In-memory set of users who completed the verify step
 verified_users = set()
 
-
 """═════════════════ LOGGING HELPER ═════════════════"""
-
 async def send_log(context: ContextTypes.DEFAULT_TYPE, log_message: str) -> bool:
     """Send log message to log channel"""
     if not LOG_CHANNEL_ID:
@@ -392,8 +388,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📊 <b>Bot Statistics</b>\n\n"
             f"👥 Total Users: <b>{stats['total_users']}</b>\n"
             f"🚫 Banned Users: <b>{stats['banned_users']}</b>\n"
-            f"🖼 Users with Thumbnail: <b>{stats['users_with_thumbnail']}</b>\n"
-            f"📁 Users with Dump Channel: <b>{stats['users_with_dump_channel']}</b>"
+            f"🖼 Users with Thumbnail: <b>{stats['users_with_thumbnail']}</b>"
         )
         back_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("⬅️ Back", callback_data="admin_back")]
@@ -578,8 +573,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 # Add settings submenus buttons
                 settings_kb = InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🖼 Thumbnails", callback_data="submenu_thumbnails"),
-                     InlineKeyboardButton("📁 Dump Channel", callback_data="submenu_dumpchannel")],
+                    [InlineKeyboardButton("🖼 Thumbnails", callback_data="submenu_thumbnails")],
                     [InlineKeyboardButton("⬅️ Back", callback_data="menu_back")]
                 ])
                 try:
@@ -650,32 +644,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.debug(f"Thumbnails submenu edit error: {e}")
         return
     
-    # Handle Dump Channel submenu
-    if query.data == "submenu_dumpchannel":
-        await query.answer()
-        uid = query.from_user.id
-        dump_ch = get_dump_channel(uid)
-        dump_status = f"✅ Set: {dump_ch}" if dump_ch else "❌ Not Set"
-        text = (
-            "📁 <b>Dump Channel</b>\n\n"
-            f"Status: <b>{dump_status}</b>\n\n"
-            "Use a dump channel to store your videos before sending them."
-        )
-        dump_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("➕ Set Dump Channel", callback_data="dump_set_info"),
-             InlineKeyboardButton("👁️ Show Dump Channel", callback_data="dump_show")],
-            [InlineKeyboardButton("🗑️ Delete Dump Channel", callback_data="dump_delete"),
-             InlineKeyboardButton("⬅️ Back", callback_data="menu_settings")]
-        ])
-        try:
-            msg = query.message
-            if getattr(msg, "photo", None):
-                await msg.edit_caption(text, reply_markup=dump_kb, parse_mode="HTML")
-            else:
-                await msg.edit_text(text, reply_markup=dump_kb, parse_mode="HTML")
-        except Exception as e:
-            logger.debug(f"Dump channel submenu edit error: {e}")
-        return
     
     # Handle thumbnail operations
     if query.data == "thumb_save_info":
@@ -757,94 +725,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         return
     
-    # Handle dump channel operations
-    if query.data == "dump_set_info":
-        await query.answer()
-        uid = query.from_user.id
-        # Set flag to capture dump channel ID in text handler
-        context.user_data[f"{uid}_setting_dump_channel"] = True
-        
-        text = (
-            "📁 <b>Set Dump Channel</b>\n\n"
-            "<b>How to setup:</b>\n"
-            "1️⃣ Create a private channel on Telegram\n"
-            "2️⃣ Add this bot as admin in that channel\n"
-            "3️⃣ Send me the channel ID (format: -100XXXX...)\n"
-            "4️⃣ I'll save it and send videos there first\n\n"
-            "📤 <b>Then:</b> Send video with cover → sent to dump channel → forwarded to you\n\n"
-            "👇 <b>Send your dump channel ID now:</b>"
-        )
-        back_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("⬅️ Cancel", callback_data="submenu_dumpchannel")]
-        ])
-        try:
-            msg = query.message
-            if getattr(msg, "photo", None):
-                await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
-            else:
-                await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
-        except Exception:
-            pass
-        return
-    
-    if query.data == "dump_show":
-        await query.answer()
-        dump_ch = get_dump_channel(user_id)
-        if dump_ch:
-            text = f"📁 <b>Your Dump Channel ID:</b>\n\n<code>{dump_ch}</code>"
-            back_kb = InlineKeyboardMarkup([
-                [InlineKeyboardButton("⬅️ Back", callback_data="submenu_dumpchannel")]
-            ])
-            try:
-                msg = query.message
-                if getattr(msg, "photo", None):
-                    await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
-                else:
-                    await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
-            except Exception:
-                pass
-        else:
-            text = "❌ <b>No Dump Channel Set</b>\n\nUse 'Set Dump Channel' to add one."
-            back_kb = InlineKeyboardMarkup([
-                [InlineKeyboardButton("⬅️ Back", callback_data="submenu_dumpchannel")]
-            ])
-            try:
-                msg = query.message
-                if getattr(msg, "photo", None):
-                    await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
-                else:
-                    await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
-            except Exception:
-                pass
-        return
-    
-    if query.data == "dump_delete":
-        await query.answer()
-        username = update.callback_query.from_user.username or "Unknown"
-        
-        if delete_dump_channel(user_id):
-            text = "✅ <b>Dump Channel Deleted</b>\n\nYour dump channel has been removed successfully."
-            
-            # Log dump channel deletion
-            log_data = log_dump_channel_removed(user_id, username)
-            log_msg = format_log_message(user_id, username, log_data["action"])
-            await send_log(context, log_msg)
-        else:
-            text = "❌ <b>No Dump Channel to Delete</b>\n\nYou don't have a dump channel set."
-        
-        back_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("⬅️ Back", callback_data="submenu_dumpchannel")]
-        ])
-        try:
-            msg = query.message
-            if getattr(msg, "photo", None):
-                await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
-            else:
-                await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
-        except Exception:
-            pass
-        return
-
     logger.warning(f"⚠️ Unknown callback: {query.data}")
     try:
         await query.answer("Unknown action", show_alert=False)
@@ -1018,19 +898,16 @@ async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
     user_id = update.message.from_user.id
-    # Show both thumbnails and dump channel status, redirect to submenu
+    # Show thumbnail status
     thumb_status = "✅ Saved" if has_thumbnail(user_id) else "❌ Not Saved"
-    dump_status = "✅ Set" if get_dump_channel(user_id) else "❌ Not Set"
     
     text = (
         "⚙️ <b>Settings</b>\n\n"
-        f"🖼 Thumbnail: <b>{thumb_status}</b>\n"
-        f"📁 Dump Channel: <b>{dump_status}</b>\n\n"
+        f"🖼 Thumbnail: <b>{thumb_status}</b>\n\n"
         "Choose what you want to manage:"
     )
     settings_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🖼 Thumbnails", callback_data="submenu_thumbnails"),
-         InlineKeyboardButton("📁 Dump Channel", callback_data="submenu_dumpchannel")],
+        [InlineKeyboardButton("🖼 Thumbnails", callback_data="submenu_thumbnails")],
         [InlineKeyboardButton("⬅️ Back", callback_data="menu_back")]
     ])
     await update.message.reply_text(text, reply_markup=settings_kb, parse_mode="HTML")
@@ -1092,53 +969,8 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     media = InputMediaVideo(media=video, caption=new_caption,caption_entities=caption_entities, supports_streaming=True, cover=cover)
     
     try:
-        # Check if user has dump channel configured
-        dump_channel = get_dump_channel(user_id)
-        if dump_channel:
-            # Send to dump channel first
-            try:
-                # 1️⃣ USER MESSAGE – ALWAYS FIRST
-                await context.bot.edit_message_media(
-                    chat_id=update.effective_chat.id,
-                    message_id=msg.message_id,
-                    media=InputMediaVideo(
-                        media=video,
-                        caption=new_caption,
-                        caption_entities=caption_entities,
-                        supports_streaming=True,
-                        cover=cover
-                    )
-                )
-
-                # 2️⃣ DUMP CHANNEL – BACKUP ONLY
-                dump_channel = get_dump_channel(user_id)
-                if dump_channel:
-                    await context.bot.send_video(
-                        chat_id=dump_channel,
-                        video=video,
-                        caption=new_caption,
-                        supports_streaming=True
-                        # ❌ thumbnail mat bhejo
-                        # ❌ entities important nahi
-                    )
-                logger.info(f"✅ Video sent to dump channel {dump_channel} for user {user_id}")
-                # Then send to user
-                await update.message.reply_video(
-                    video=dump_msg.video.file_id,
-                    caption=new_caption,
-                    caption_entities=caption_entities,
-                    supports_streaming=True,
-                    reply_to_message_id=update.message.message_id,
-                    parse_mode="HTML"
-                )
-                await msg.delete()
-            except Exception as e:
-                logger.error(f"Error with dump channel: {e}")
-                # Fallback to direct edit
-                await context.bot.edit_message_media(chat_id=update.effective_chat.id, message_id=msg.message_id, media=media)
-        else:
-            # No dump channel, just edit message
-            await context.bot.edit_message_media(chat_id=update.effective_chat.id, message_id=msg.message_id, media=media)
+        # Edit message with video and cover
+        await context.bot.edit_message_media(chat_id=update.effective_chat.id, message_id=msg.message_id, media=media)
         
         # Forward video to log channel
         if LOG_CHANNEL_ID:
@@ -1359,51 +1191,11 @@ async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle text messages - for dump channel ID submission"""
+    """Handle text messages"""
     if not await check_force_sub(update, context):
         return
     
-    user_id = update.message.from_user.id
-    username = update.message.from_user.username or "Unknown"
-    text = update.message.text
-    
-    # Check if user is in dump channel setup mode (via context.user_data)
-    if context.user_data.get(f"{user_id}_setting_dump_channel"):
-        # User sending dump channel ID
-        try:
-            # Try to parse as channel ID
-            channel_id = text.strip()
-            if not channel_id.startswith(('-100', '-')):
-                await update.message.reply_text(
-                    "❌ <b>Invalid Channel ID Format</b>\n\n"
-                    "Channel IDs should start with -100\n"
-                    "Example: -1001234567890",
-                    parse_mode="HTML"
-                )
-                return
-            
-            # Save dump channel ID
-            save_dump_channel(user_id, channel_id)
-            context.user_data.pop(f"{user_id}_setting_dump_channel", None)
-            
-            # Log dump channel setup
-            log_data = log_dump_channel_set(user_id, username, channel_id)
-            log_msg = format_log_message(user_id, username, log_data["action"], log_data.get("details", ""))
-            await send_log(context, log_msg)
-            
-            await update.message.reply_text(
-                f"✅ <b>Dump Channel Saved</b>\n\n"
-                f"Channel ID: <code>{channel_id}</code>\n\n"
-                "Now videos with cover will be sent to this channel first!",
-                parse_mode="HTML"
-            )
-            logger.info(f"✅ Dump channel {channel_id} saved for user {user_id}")
-        except Exception as e:
-            logger.error(f"Error saving dump channel: {e}")
-            await update.message.reply_text(f"❌ Error: {e}", parse_mode="HTML")
-        return
-    
-    # Ignore all other text messages (don't respond)
+    # Ignore all text messages (don't respond)
 
 
 """-----------CALLBAck Hnadlers--------"""
