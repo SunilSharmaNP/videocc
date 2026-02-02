@@ -222,7 +222,10 @@ async def check_admin_and_banned(update: Update, user_id_to_check: int = None) -
 """------------------FORCE-SUB CHECK-----------------"""
 
 async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """Check if user has joined the required channel (FileStreamBot pattern: auto-verify + auto-delete)"""
+    """
+    Check if user has joined the required channel.
+    Improved version from WZML-X with better error handling.
+    """
     user_id = update.effective_user.id
 
     # Owner bypass
@@ -237,104 +240,119 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if user_id in verified_users:
         return True
 
-    # Parse channel ID
     try:
-        chat_id = int(FORCE_SUB_CHANNEL_ID) if str(FORCE_SUB_CHANNEL_ID).isdigit() else FORCE_SUB_CHANNEL_ID
-    except Exception:
-        logger.error(f"Invalid FORCE_SUB_CHANNEL_ID: {FORCE_SUB_CHANNEL_ID}")
-        return True  # Fail open
-
-    try:
-        # Check if user is already a member
+        # Parse channel ID
         try:
-            member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
-            # Check status - use both OWNER and CREATOR for compatibility
-            allowed_statuses = (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR)
-            # Try to add OWNER or CREATOR if they exist
-            try:
-                allowed_statuses = allowed_statuses + (ChatMemberStatus.OWNER,)
-            except AttributeError:
-                try:
-                    allowed_statuses = allowed_statuses + (ChatMemberStatus.CREATOR,)
-                except AttributeError:
-                    pass
-            
-            if member.status in allowed_statuses:
-                verified_users.add(user_id)
-                return True
-            # User is restricted, left, or kicked
-            if member.status == ChatMemberStatus.KICKED:
-                await send_or_edit(update, "🚫 <b>Blocked</b>\n\nYou are blocked from this channel.", parse_mode="HTML")
-                return False
-        except Exception as e:
-            logger.debug(f"Member check initial failed: {e}")
+            channel_id = int(FORCE_SUB_CHANNEL_ID)
+        except (ValueError, TypeError):
+            channel_id = FORCE_SUB_CHANNEL_ID
 
-        # User not in channel — show join prompt
-        invite_link = await get_invite_link(context.bot, chat_id)
-        if not invite_link:
-            # Fallback to public link
-            try:
-                chat = await context.bot.get_chat(chat_id)
-                invite_link = getattr(chat, "invite_link", None) or (f"https://t.me/{getattr(chat, 'username', '')}" if getattr(chat, 'username', None) else None)
-            except Exception:
-                invite_link = None
+        # Check if user is a member
+        try:
+            member = await context.bot.get_chat_member(chat_id=channel_id, user_id=user_id)
+            
+            # Allowed statuses (member, administrator, creator, owner)
+            if member.status in (
+                ChatMemberStatus.MEMBER,
+                ChatMemberStatus.ADMINISTRATOR,
+                ChatMemberStatus.OWNER,
+                ChatMemberStatus.CREATOR
+            ):
+                verified_users.add(user_id)
+                logger.info(f"✅ User {user_id} verified as channel member")
+                return True
+            
+            # User is restricted/kicked
+            if member.status == ChatMemberStatus.KICKED:
+                await send_or_edit(update, "🚫 <b>Blocked</b>\n\nYou are blocked from accessing this bot.", parse_mode="HTML")
+                logger.warning(f"⛔ User {user_id} is blocked from channel")
+                return False
+                
+            # User is left/restricted but not kicked
+            logger.debug(f"User {user_id} status: {member.status}")
+            
+        except Exception as e:
+            logger.debug(f"Member check failed (will show join prompt): {e}")
+
+        # User not member - show join prompt
+        try:
+            chat = await context.bot.get_chat(channel_id)
+            
+            # Get invite link
+            if chat.username:
+                invite_link = f"https://t.me/{chat.username}"
+            elif chat.invite_link:
+                invite_link = chat.invite_link
+            else:
+                # Try to create a new invite link
+                try:
+                    link_obj = await context.bot.create_chat_invite_link(chat_id=channel_id, member_limit=1)
+                    invite_link = link_obj.invite_link
+                except Exception:
+                    invite_link = None
+            
+            if not invite_link:
+                logger.error(f"❌ Could not get invite link for {channel_id}")
+                # Fail open if we can't get link
+                return True
+            
+        except Exception as e:
+            logger.error(f"❌ Could not get chat info for {channel_id}: {e}")
+            return True  # Fail open
 
         # Build keyboard
-        kb_rows = []
-        kb_rows.append([InlineKeyboardButton("📢 Join Updates Channel", url=invite_link if invite_link else "https://t.me/")])
-        kb_rows.append([
-            InlineKeyboardButton("✅ Verify Access", callback_data="check_fsub"),
-            InlineKeyboardButton("✖️ Close", callback_data="close_banner")
-        ])
+        kb_rows = [
+            [InlineKeyboardButton("📢 Join Channel", url=invite_link)],
+            [
+                InlineKeyboardButton("✅ Verify", callback_data="check_fsub"),
+                InlineKeyboardButton("✖️ Close", callback_data="close_banner")
+            ]
+        ]
+        
         if OWNER_USERNAME:
             kb_rows.append([InlineKeyboardButton("📞 Contact Owner", url=f"https://t.me/{OWNER_USERNAME}")])
 
         kb = InlineKeyboardMarkup(kb_rows)
         prompt = (
             "🔒 " + fancy_text("Access Restricted") + "\n\n"
-            "To use this bot, you must join our updates channel.\n\n"
-            "👇 Join the channel using button below 👇"
+            "You must join our updates channel to use this bot.\n\n"
+            "👇 Join the channel below 👇"
         )
 
-        msg = await send_or_edit(update, prompt, kb, get_force_banner())
-
-        # Wait 30 seconds (FileStreamBot pattern)
-        await asyncio.sleep(30)
-
-        # Try to delete the prompt message
         try:
-            if update.callback_query and msg:
-                await msg.delete()
-            elif update.message:
-                await update.message.delete()
-        except Exception:
-            pass
+            msg = await send_or_edit(update, prompt, kb, get_force_banner())
+            logger.info(f"🔒 Showing force-sub prompt to user {user_id}")
+        except Exception as e:
+            logger.error(f"❌ Failed to send force-sub prompt: {e}")
+            return True
 
-        # Auto-recheck membership after 30s
+        # Wait briefly then recheck
+        await asyncio.sleep(3)
+
+        # Recheck membership
         try:
-            member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
-            # Check status - use both OWNER and CREATOR for compatibility
-            allowed_statuses = (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR)
-            # Try to add OWNER or CREATOR if they exist
-            try:
-                allowed_statuses = allowed_statuses + (ChatMemberStatus.OWNER,)
-            except AttributeError:
-                try:
-                    allowed_statuses = allowed_statuses + (ChatMemberStatus.CREATOR,)
-                except AttributeError:
-                    pass
-            
-            if member.status in allowed_statuses:
+            member = await context.bot.get_chat_member(chat_id=channel_id, user_id=user_id)
+            if member.status in (
+                ChatMemberStatus.MEMBER,
+                ChatMemberStatus.ADMINISTRATOR,
+                ChatMemberStatus.OWNER,
+                ChatMemberStatus.CREATOR
+            ):
                 verified_users.add(user_id)
+                logger.info(f"✅ User {user_id} joined and verified")
+                try:
+                    await msg.delete()
+                except Exception:
+                    pass
                 return True
         except Exception as e:
-            logger.debug(f"Auto-recheck after 30s failed: {e}")
+            logger.debug(f"Recheck failed: {e}")
 
         return False
 
     except Exception as e:
-        logger.error(f"❌ Force-Sub Error: {e}")
-        return True  # Fail open
+        logger.error(f"❌ Force-Sub Critical Error: {e}")
+        return True  # Fail open on critical error
 
 
 
