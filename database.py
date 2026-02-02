@@ -109,70 +109,6 @@ def has_thumbnail(user_id: int) -> bool:
         return False
 
 
-def save_dump_channel(user_id: int, channel_id: str) -> bool:
-    """Save user's dump channel ID to MongoDB"""
-    if not DB_AVAILABLE:
-        logger.debug(f"Database not available, skipping dump channel save for user {user_id}")
-        return False
-    
-    try:
-        users_collection.update_one(
-            {"user_id": user_id},
-            {
-                "$set": {
-                    "user_id": user_id,
-                    "dump_channel_id": channel_id,
-                    "updated_at": datetime.now()
-                }
-            },
-            upsert=True
-        )
-        logger.info(f"✅ Dump channel saved for user {user_id}: {channel_id}")
-        return True
-    except Exception as e:
-        logger.error(f"❌ Error saving dump channel: {e}")
-        return False
-
-
-def get_dump_channel(user_id: int) -> str | None:
-    """Retrieve user's dump channel ID from MongoDB"""
-    if not DB_AVAILABLE:
-        logger.debug(f"Database not available, cannot get dump channel for user {user_id}")
-        return None
-    
-    try:
-        user_record = users_collection.find_one({"user_id": user_id})
-        if user_record and "dump_channel_id" in user_record:
-            logger.info(f"✅ Retrieved dump channel for user {user_id}")
-            return user_record["dump_channel_id"]
-        logger.info(f"⚠️ No dump channel found for user {user_id}")
-        return None
-    except Exception as e:
-        logger.error(f"❌ Error retrieving dump channel: {e}")
-        return None
-
-
-def delete_dump_channel(user_id: int) -> bool:
-    """Delete user's dump channel ID from MongoDB"""
-    if not DB_AVAILABLE:
-        logger.debug(f"Database not available, skipping dump channel delete for user {user_id}")
-        return False
-    
-    try:
-        result = users_collection.update_one(
-            {"user_id": user_id},
-            {"$unset": {"dump_channel_id": ""}}
-        )
-        if result.modified_count > 0:
-            logger.info(f"✅ Dump channel deleted for user {user_id}")
-            return True
-        logger.info(f"⚠️ No dump channel to delete for user {user_id}")
-        return False
-    except Exception as e:
-        logger.error(f"❌ Error deleting dump channel: {e}")
-        return False
-
-
 """═══════════════════ ADMIN FUNCTIONS ═══════════════════"""
 
 
@@ -278,21 +214,18 @@ def get_stats() -> dict:
         return {
             "total_users": 0,
             "banned_users": 0,
-            "users_with_thumbnail": 0,
-            "users_with_dump_channel": 0
+            "users_with_thumbnail": 0
         }
     
     try:
         total = users_collection.count_documents({})
         banned = users_collection.count_documents({"is_banned": True})
         with_thumb = users_collection.count_documents({"photo_id": {"$exists": True}})
-        with_dump = users_collection.count_documents({"dump_channel_id": {"$exists": True}})
         
         stats = {
             "total_users": total,
             "banned_users": banned,
-            "users_with_thumbnail": with_thumb,
-            "users_with_dump_channel": with_dump
+            "users_with_thumbnail": with_thumb
         }
         logger.info(f"📊 Stats: {stats}")
         return stats
@@ -301,8 +234,7 @@ def get_stats() -> dict:
         return {
             "total_users": 0,
             "banned_users": 0,
-            "users_with_thumbnail": 0,
-            "users_with_dump_channel": 0
+            "users_with_thumbnail": 0
         }
 
 
@@ -376,21 +308,6 @@ def log_thumbnail_set(user_id: int, username: str, is_replace: bool = False) -> 
 def log_thumbnail_removed(user_id: int, username: str) -> dict:
     """Log thumbnail removal"""
     action = "🗑️ Thumbnail Removed"
-    logger.info(f"✅ {action} - {username} ({user_id})")
-    return create_log_entry(user_id, username, action)
-
-
-def log_dump_channel_set(user_id: int, username: str, channel_id: str) -> dict:
-    """Log dump channel set"""
-    action = "📁 Dump Channel Set"
-    details = f"Channel ID: {channel_id}"
-    logger.info(f"✅ {action} - {username} ({user_id}): {channel_id}")
-    return create_log_entry(user_id, username, action, details)
-
-
-def log_dump_channel_removed(user_id: int, username: str) -> dict:
-    """Log dump channel removal"""
-    action = "🗑️ Dump Channel Removed"
     logger.info(f"✅ {action} - {username} ({user_id})")
     return create_log_entry(user_id, username, action)
 
