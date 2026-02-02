@@ -242,17 +242,28 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     try:
         # Parse channel ID - handle both formats
-        if FORCE_SUB_CHANNEL_ID.startswith("-100"):
-            channel_chat_id = int(FORCE_SUB_CHANNEL_ID)
-        else:
-            try:
-                channel_chat_id = int(FORCE_SUB_CHANNEL_ID)
-            except (ValueError, TypeError):
-                channel_chat_id = FORCE_SUB_CHANNEL_ID
+        channel_id_str = str(FORCE_SUB_CHANNEL_ID).strip()
+        logger.info(f"🔧 Force-sub check | User: {user_id} | Channel config: {channel_id_str}")
+        
+        try:
+            if channel_id_str.startswith("-"):
+                channel_chat_id = int(channel_id_str)
+            else:
+                try:
+                    channel_chat_id = int(channel_id_str)
+                except ValueError:
+                    channel_chat_id = channel_id_str
+        except Exception as parse_err:
+            logger.error(f"❌ Channel ID parse error: {parse_err}")
+            channel_chat_id = channel_id_str
+        
+        logger.info(f"📌 Parsed channel ID: {channel_chat_id} (type: {type(channel_chat_id).__name__})")
         
         # Check if user is a member
         try:
+            logger.info(f"🔎 Getting chat member: user {user_id} in chat {channel_chat_id}")
             member = await context.bot.get_chat_member(chat_id=channel_chat_id, user_id=user_id)
+            logger.info(f"📊 Member status: {member.status}")
             
             # Check membership status
             if member.status in (
@@ -282,13 +293,15 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 return False
             
         except Exception as e:
-            logger.debug(f"Member check exception: {type(e).__name__}: {e}")
+            logger.warning(f"⚠️ Member check exception: {type(e).__name__}: {e}")
             # User might not be in channel - proceed to show join prompt
 
         # User is not member - show join prompt
         try:
+            logger.info(f"📍 Getting chat info for {channel_chat_id}")
             chat = await context.bot.get_chat(channel_chat_id)
             channel_name = chat.title or chat.username or "Channel"
+            logger.info(f"✅ Got chat info: {channel_name}")
             
             # Get invite link
             invite_link = None
@@ -372,27 +385,42 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_id = query.from_user.id
+    logger.info(f"👤 User ID: {user_id} | Channel ID Config: {FORCE_SUB_CHANNEL_ID}")
     
     # Handle force-sub verification button
     if query.data == "check_fsub":
+        logger.info(f"🔍 Verify button clicked by user {user_id}")
         await query.answer()
         
         if not FORCE_SUB_CHANNEL_ID:
+            logger.warning("⚠️ FORCE_SUB_CHANNEL_ID not configured")
             await open_home(update, context)
             return
         
         try:
-            # Parse channel ID
-            if FORCE_SUB_CHANNEL_ID.startswith("-100"):
-                channel_id = int(FORCE_SUB_CHANNEL_ID)
-            else:
-                try:
-                    channel_id = int(FORCE_SUB_CHANNEL_ID)
-                except (ValueError, TypeError):
-                    channel_id = FORCE_SUB_CHANNEL_ID
+            # Parse channel ID - make sure we handle it as string first
+            channel_id_str = str(FORCE_SUB_CHANNEL_ID).strip()
+            logger.info(f"📌 Channel ID string: {channel_id_str}")
+            
+            # Try to convert to int
+            try:
+                if channel_id_str.startswith("-"):
+                    channel_id = int(channel_id_str)
+                else:
+                    # Try as int first, otherwise keep as string
+                    try:
+                        channel_id = int(channel_id_str)
+                    except ValueError:
+                        channel_id = channel_id_str
+            except Exception as parse_error:
+                logger.error(f"❌ Failed to parse channel ID: {parse_error}")
+                channel_id = channel_id_str
+            
+            logger.info(f"🔎 Checking membership for user {user_id} in channel {channel_id}")
             
             # Direct membership check
             member = await context.bot.get_chat_member(chat_id=channel_id, user_id=user_id)
+            logger.info(f"📊 Member status: {member.status}")
             
             # Check if user is member
             if member.status in (
@@ -402,25 +430,28 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ChatMemberStatus.CREATOR
             ):
                 verified_users.add(user_id)
-                logger.info(f"✅ User {user_id} verified successfully")
+                logger.info(f"✅ User {user_id} verified successfully with status {member.status}")
                 
                 # Try to delete verification message
                 try:
                     await query.message.delete()
-                except Exception:
-                    pass
+                    logger.info(f"🗑️ Verification message deleted")
+                except Exception as del_error:
+                    logger.warning(f"Could not delete message: {del_error}")
                 
                 # Show home screen
+                logger.info(f"🏠 Showing home screen for user {user_id}")
                 await open_home(update, context)
                 return
             
             # User not in channel yet
+            logger.warning(f"⚠️ User {user_id} not a member. Status: {member.status}")
             await query.answer("❌ Join the channel first!", show_alert=True)
             return
             
         except Exception as e:
-            logger.error(f"Verification error: {e}")
-            await query.answer("❌ Verification failed!", show_alert=True)
+            logger.error(f"❌ Verification error: {type(e).__name__}: {e}", exc_info=True)
+            await query.answer("❌ Verification failed! Please try again.", show_alert=True)
             return
     
     # Handle close button
