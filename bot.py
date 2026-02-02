@@ -269,8 +269,7 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             if member.status in (
                 ChatMemberStatus.MEMBER,
                 ChatMemberStatus.ADMINISTRATOR,
-                ChatMemberStatus.OWNER,
-                ChatMemberStatus.CREATOR
+                ChatMemberStatus.OWNER
             ):
                 verified_users.add(user_id)
                 logger.info(f"✅ User {user_id} verified as channel member")
@@ -426,8 +425,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if member.status in (
                 ChatMemberStatus.MEMBER,
                 ChatMemberStatus.ADMINISTRATOR,
-                ChatMemberStatus.OWNER,
-                ChatMemberStatus.CREATOR
+                ChatMemberStatus.OWNER
             ):
                 verified_users.add(user_id)
                 logger.info(f"✅ User {user_id} verified successfully with status {member.status}")
