@@ -224,7 +224,7 @@ async def check_admin_and_banned(update: Update, user_id_to_check: int = None) -
 async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """
     Check if user has joined the required channel.
-    Improved version from WZML-X with better error handling.
+    Improved version with proper verification.
     """
     user_id = update.effective_user.id
 
@@ -236,7 +236,7 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not FORCE_SUB_CHANNEL_ID:
         return True
 
-    # If user already completed the verify step, allow access
+    # If user already verified, allow access
     if user_id in verified_users:
         return True
 
@@ -251,7 +251,7 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         try:
             member = await context.bot.get_chat_member(chat_id=channel_id, user_id=user_id)
             
-            # Allowed statuses (member, administrator, creator, owner)
+            # Allowed statuses
             if member.status in (
                 ChatMemberStatus.MEMBER,
                 ChatMemberStatus.ADMINISTRATOR,
@@ -262,19 +262,22 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 logger.info(f"✅ User {user_id} verified as channel member")
                 return True
             
-            # User is restricted/kicked
+            # User is kicked
             if member.status == ChatMemberStatus.KICKED:
-                await send_or_edit(update, "🚫 <b>Blocked</b>\n\nYou are blocked from accessing this bot.", parse_mode="HTML")
+                try:
+                    await update.message.reply_text(
+                        "🚫 <b>Blocked</b>\n\nYou are blocked from accessing this bot.",
+                        parse_mode="HTML"
+                    )
+                except Exception:
+                    pass
                 logger.warning(f"⛔ User {user_id} is blocked from channel")
                 return False
-                
-            # User is left/restricted but not kicked
-            logger.debug(f"User {user_id} status: {member.status}")
             
         except Exception as e:
-            logger.debug(f"Member check failed (will show join prompt): {e}")
+            logger.debug(f"Member check failed: {e}")
 
-        # User not member - show join prompt
+        # Get channel info and invite link
         try:
             chat = await context.bot.get_chat(channel_id)
             
@@ -284,75 +287,55 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             elif chat.invite_link:
                 invite_link = chat.invite_link
             else:
-                # Try to create a new invite link
                 try:
                     link_obj = await context.bot.create_chat_invite_link(chat_id=channel_id, member_limit=1)
                     invite_link = link_obj.invite_link
-                except Exception:
-                    invite_link = None
-            
-            if not invite_link:
-                logger.error(f"❌ Could not get invite link for {channel_id}")
-                # Fail open if we can't get link
-                return True
+                except Exception as e:
+                    logger.error(f"Could not create invite link: {e}")
+                    invite_link = f"https://t.me/c/{str(channel_id)[4:]}"
             
         except Exception as e:
-            logger.error(f"❌ Could not get chat info for {channel_id}: {e}")
+            logger.error(f"Could not get chat info: {e}")
             return True  # Fail open
 
         # Build keyboard
-        kb_rows = [
+        kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("📢 Join Channel", url=invite_link)],
             [
                 InlineKeyboardButton("✅ Verify", callback_data="check_fsub"),
                 InlineKeyboardButton("✖️ Close", callback_data="close_banner")
             ]
-        ]
+        ])
         
-        if OWNER_USERNAME:
-            kb_rows.append([InlineKeyboardButton("📞 Contact Owner", url=f"https://t.me/{OWNER_USERNAME}")])
-
-        kb = InlineKeyboardMarkup(kb_rows)
         prompt = (
             "🔒 " + fancy_text("Access Restricted") + "\n\n"
             "You must join our updates channel to use this bot.\n\n"
-            "👇 Join the channel below 👇"
+            "👇 Click Join Channel below 👇"
         )
 
         try:
-            msg = await send_or_edit(update, prompt, kb, get_force_banner())
-            logger.info(f"🔒 Showing force-sub prompt to user {user_id}")
+            if update.message:
+                await update.message.reply_text(
+                    prompt,
+                    reply_markup=kb,
+                    parse_mode="HTML"
+                )
+            elif update.callback_query:
+                await update.callback_query.message.edit_text(
+                    prompt,
+                    reply_markup=kb,
+                    parse_mode="HTML"
+                )
+            logger.info(f"🔒 Force-sub prompt shown to user {user_id}")
         except Exception as e:
-            logger.error(f"❌ Failed to send force-sub prompt: {e}")
+            logger.error(f"Failed to show prompt: {e}")
             return True
-
-        # Wait briefly then recheck
-        await asyncio.sleep(3)
-
-        # Recheck membership
-        try:
-            member = await context.bot.get_chat_member(chat_id=channel_id, user_id=user_id)
-            if member.status in (
-                ChatMemberStatus.MEMBER,
-                ChatMemberStatus.ADMINISTRATOR,
-                ChatMemberStatus.OWNER,
-                ChatMemberStatus.CREATOR
-            ):
-                verified_users.add(user_id)
-                logger.info(f"✅ User {user_id} joined and verified")
-                try:
-                    await msg.delete()
-                except Exception:
-                    pass
-                return True
-        except Exception as e:
-            logger.debug(f"Recheck failed: {e}")
 
         return False
 
     except Exception as e:
-        logger.error(f"❌ Force-Sub Critical Error: {e}")
-        return True  # Fail open on critical error
+        logger.error(f"Force-Sub Error: {e}", exc_info=True)
+        return True  # Fail open
 
 
 
@@ -376,10 +359,39 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Handle explicit verify button click
     if query.data == "check_fsub":
         await query.answer("✅ Verifying...")
-    
-        if await check_force_sub(update, context):
-            verified_users.add(user_id)
+        
+        try:
+            channel_id = int(FORCE_SUB_CHANNEL_ID) if FORCE_SUB_CHANNEL_ID else None
+        except (ValueError, TypeError):
+            channel_id = FORCE_SUB_CHANNEL_ID
+        
+        if not channel_id:
             await open_home(update, context)
+            return
+        
+        # Check membership
+        try:
+            member = await context.bot.get_chat_member(chat_id=channel_id, user_id=user_id)
+            
+            if member.status in (
+                ChatMemberStatus.MEMBER,
+                ChatMemberStatus.ADMINISTRATOR,
+                ChatMemberStatus.OWNER,
+                ChatMemberStatus.CREATOR
+            ):
+                verified_users.add(user_id)
+                logger.info(f"✅ User {user_id} verified successfully")
+                try:
+                    await query.message.delete()
+                except Exception:
+                    pass
+                await open_home(update, context)
+                return
+        except Exception as e:
+            logger.debug(f"Verification check failed: {e}")
+        
+        # User still not member
+        await query.answer("❌ You haven't joined the channel yet!", show_alert=True)
         return
     # Handle other callback actions first
     if query.data == "close_banner":
@@ -800,7 +812,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Log new user (if first time)
     user_check = get_thumbnail(user_id)
-    if user_check is None and get_dump_channel(user_id) is None:
+    if user_check is None:
         # New user - log it
         log_data = log_new_user(user_id, username, first_name)
         log_msg = format_log_message(user_id, username, log_data["action"], log_data.get("details", ""))
@@ -1161,8 +1173,7 @@ async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📊 <b>Bot Statistics</b>\n\n"
         f"👥 Total Users: <b>{stats['total_users']}</b>\n"
         f"🚫 Banned Users: <b>{stats['banned_users']}</b>\n"
-        f"🖼 Users with Thumbnail: <b>{stats['users_with_thumbnail']}</b>\n"
-        f"📁 Users with Dump Channel: <b>{stats['users_with_dump_channel']}</b>"
+        f"🖼 Users with Thumbnail: <b>{stats['users_with_thumbnail']}</b>"
     )
     await update.message.reply_text(text, parse_mode="HTML")
 
