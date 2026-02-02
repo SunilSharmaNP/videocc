@@ -341,6 +341,8 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return True  # Fail open
 
 
+
+
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle callback query for force-sub verification"""
     query = update.callback_query
@@ -359,65 +361,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Handle explicit verify button click
     if query.data == "check_fsub":
-        logger.info(f"🔍 Processing verify button for user {user_id}")
-        
-        # Answer callback IMMEDIATELY to prevent timeout
-        try:
-            await query.answer()
-        except Exception as e:
-            logger.debug(f"Early callback answer error (okay): {e}")
-        
-        try:
-            chat_id = int(FORCE_SUB_CHANNEL_ID) if str(FORCE_SUB_CHANNEL_ID).isdigit() else FORCE_SUB_CHANNEL_ID
-        except Exception:
-            logger.error(f"Invalid FORCE_SUB_CHANNEL_ID: {FORCE_SUB_CHANNEL_ID}")
-            verified_users.add(user_id)
-            await start(update, context)
-            return
-
-        try:
-            member = await context.bot.get_chat_member(chat_id=chat_id, user_id=user_id)
-            logger.info(f"✅ Member status: {member.status}")
-            
-            # Check if user is member, admin, or owner
-            allowed_statuses = (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR)
-            try:
-                allowed_statuses = allowed_statuses + (ChatMemberStatus.OWNER,)
-            except AttributeError:
-                try:
-                    allowed_statuses = allowed_statuses + (ChatMemberStatus.CREATOR,)
-                except AttributeError:
-                    pass
-            
-            if member.status in allowed_statuses:
-                # User joined! Verify instantly and show home menu
-                verified_users.add(user_id)
-                logger.info(f"✅ User {user_id} verified, opening home menu instantly")
-                await start(update, context)
-                return
-            else:
-                # User not member - send error message
-                msg = query.message
-                error_text = (
-                    "❌ <b>You haven't joined yet!</b>\n\n"
-                    "Join our channel using the button below, then click Verify again."
-                )
-                try:
-                    if getattr(msg, "photo", None):
-                        await msg.edit_caption(error_text, parse_mode="HTML")
-                    else:
-                        await msg.edit_text(error_text, parse_mode="HTML")
-                except Exception:
-                    pass
-                logger.warning(f"❌ User {user_id} not member. Status: {member.status}")
-                return
-        except Exception as e:
-            logger.error(f"❌ Verify button check error: {e}", exc_info=True)
-            # Fail open
-            verified_users.add(user_id)
-            await start(update, context)
-            return
+        await query.answer("✅ Verifying...")
     
+        if await check_force_sub(update, context):
+            verified_users.add(user_id)
+            await open_home(update, context)
+        return
     # Handle other callback actions first
     if query.data == "close_banner":
         logger.info(f"❌ Close banner for user {user_id}")
@@ -904,6 +853,42 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 """---------------------- Menus--------------------- """
+
+async def open_home(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = (
+        fancy_text("Welcome to Instant Cover Bot") + "\n\n"
+        "📸 Send a <b>photo</b> to set thumbnail\n"
+        "🎥 Send a <b>video</b> to get it with cover\n\n"
+        "🧩 <b>Commands:</b>\n"
+        "/help – How to use bot\n"
+        "/settings – Bot settings\n"
+        "/about – About this bot"
+    )
+
+    kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("❓ Help", callback_data="menu_help"),
+         InlineKeyboardButton("ℹ️ About", callback_data="menu_about")],
+        [InlineKeyboardButton("⚙️ Settings", callback_data="menu_settings"),
+         InlineKeyboardButton("👨‍💻 Developer", callback_data="menu_developer")],
+    ])
+
+    if update.callback_query:
+        msg = update.callback_query.message
+        try:
+            if msg.photo:
+                await msg.edit_caption(text, reply_markup=kb, parse_mode="HTML")
+            else:
+                await msg.edit_text(text, reply_markup=kb, parse_mode="HTML")
+        except:
+            await context.bot.send_message(
+                chat_id=msg.chat.id,
+                text=text,
+                reply_markup=kb,
+                parse_mode="HTML"
+            )
+    else:
+        await update.message.reply_text(text, reply_markup=kb, parse_mode="HTML")
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
