@@ -224,7 +224,7 @@ async def check_admin_and_banned(update: Update, user_id_to_check: int = None) -
 async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """
     Check if user has joined the required channel.
-    Improved version with proper verification.
+    FileStreamBot-style implementation with proper verification.
     """
     user_id = update.effective_user.id
 
@@ -241,17 +241,20 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return True
 
     try:
-        # Parse channel ID
-        try:
-            channel_id = int(FORCE_SUB_CHANNEL_ID)
-        except (ValueError, TypeError):
-            channel_id = FORCE_SUB_CHANNEL_ID
-
+        # Parse channel ID - handle both formats
+        if FORCE_SUB_CHANNEL_ID.startswith("-100"):
+            channel_chat_id = int(FORCE_SUB_CHANNEL_ID)
+        else:
+            try:
+                channel_chat_id = int(FORCE_SUB_CHANNEL_ID)
+            except (ValueError, TypeError):
+                channel_chat_id = FORCE_SUB_CHANNEL_ID
+        
         # Check if user is a member
         try:
-            member = await context.bot.get_chat_member(chat_id=channel_id, user_id=user_id)
+            member = await context.bot.get_chat_member(chat_id=channel_chat_id, user_id=user_id)
             
-            # Allowed statuses
+            # Check membership status
             if member.status in (
                 ChatMemberStatus.MEMBER,
                 ChatMemberStatus.ADMINISTRATOR,
@@ -262,43 +265,60 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 logger.info(f"✅ User {user_id} verified as channel member")
                 return True
             
-            # User is kicked
+            # User is kicked/restricted
             if member.status == ChatMemberStatus.KICKED:
+                logger.warning(f"⛔ User {user_id} is kicked from channel")
+                
                 try:
-                    await update.message.reply_text(
-                        "🚫 <b>Blocked</b>\n\nYou are blocked from accessing this bot.",
-                        parse_mode="HTML"
-                    )
+                    if update.message:
+                        await update.message.reply_text(
+                            "🚫 <b>Blocked</b>\n\nYou are blocked from using this bot.",
+                            parse_mode="HTML"
+                        )
+                    elif update.callback_query:
+                        await update.callback_query.answer("❌ You are blocked!", show_alert=True)
                 except Exception:
                     pass
-                logger.warning(f"⛔ User {user_id} is blocked from channel")
                 return False
             
         except Exception as e:
-            logger.debug(f"Member check failed: {e}")
+            logger.debug(f"Member check exception: {type(e).__name__}: {e}")
+            # User might not be in channel - proceed to show join prompt
 
-        # Get channel info and invite link
+        # User is not member - show join prompt
         try:
-            chat = await context.bot.get_chat(channel_id)
+            chat = await context.bot.get_chat(channel_chat_id)
+            channel_name = chat.title or chat.username or "Channel"
             
             # Get invite link
+            invite_link = None
             if chat.username:
                 invite_link = f"https://t.me/{chat.username}"
-            elif chat.invite_link:
+            elif hasattr(chat, 'invite_link') and chat.invite_link:
                 invite_link = chat.invite_link
-            else:
+            
+            # Try to create invite link if doesn't exist
+            if not invite_link:
                 try:
-                    link_obj = await context.bot.create_chat_invite_link(chat_id=channel_id, member_limit=1)
+                    link_obj = await context.bot.create_chat_invite_link(
+                        chat_id=channel_chat_id, 
+                        member_limit=1
+                    )
                     invite_link = link_obj.invite_link
-                except Exception as e:
-                    logger.error(f"Could not create invite link: {e}")
-                    invite_link = f"https://t.me/c/{str(channel_id)[4:]}"
+                except Exception as link_error:
+                    logger.warning(f"Could not create invite link: {link_error}")
+                    # Fallback to direct channel link
+                    if str(channel_chat_id).startswith('-100'):
+                        invite_link = f"https://t.me/c/{str(channel_chat_id)[4:]}"
+                    else:
+                        invite_link = f"https://t.me/{channel_chat_id}"
             
         except Exception as e:
             logger.error(f"Could not get chat info: {e}")
-            return True  # Fail open
+            # Fail open on error
+            return True
 
-        # Build keyboard
+        # Build keyboard with proper styling
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("📢 Join Channel", url=invite_link)],
             [
@@ -307,10 +327,11 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             ]
         ])
         
+        # Build prompt message
         prompt = (
-            "🔒 " + fancy_text("Access Restricted") + "\n\n"
-            "You must join our updates channel to use this bot.\n\n"
-            "👇 Click Join Channel below 👇"
+            "🔒 <b>Access Restricted</b>\n\n"
+            f"You must join <b>{channel_name}</b> to use this bot.\n\n"
+            "👇 Click button below to join 👇"
         )
 
         try:
@@ -341,38 +362,39 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle callback query for force-sub verification"""
+    """Handle callback query with proper force-sub verification"""
     query = update.callback_query
     
-    logger.info(f"🔵 CALLBACK HANDLER TRIGGERED | Query Data: {query.data if query else 'NO QUERY'}")
+    logger.info(f"🔵 CALLBACK | Data: {query.data}")
     
-    if not query:
-        logger.error("❌ Query is None!")
-        return
-    
-    if not query.data:
-        logger.error("❌ Query data is None!")
+    if not query or not query.data:
+        logger.error("❌ Invalid query!")
         return
 
     user_id = query.from_user.id
     
-    # Handle explicit verify button click
+    # Handle force-sub verification button
     if query.data == "check_fsub":
-        await query.answer("✅ Verifying...")
+        await query.answer()
         
-        try:
-            channel_id = int(FORCE_SUB_CHANNEL_ID) if FORCE_SUB_CHANNEL_ID else None
-        except (ValueError, TypeError):
-            channel_id = FORCE_SUB_CHANNEL_ID
-        
-        if not channel_id:
+        if not FORCE_SUB_CHANNEL_ID:
             await open_home(update, context)
             return
         
-        # Check membership
         try:
+            # Parse channel ID
+            if FORCE_SUB_CHANNEL_ID.startswith("-100"):
+                channel_id = int(FORCE_SUB_CHANNEL_ID)
+            else:
+                try:
+                    channel_id = int(FORCE_SUB_CHANNEL_ID)
+                except (ValueError, TypeError):
+                    channel_id = FORCE_SUB_CHANNEL_ID
+            
+            # Direct membership check
             member = await context.bot.get_chat_member(chat_id=channel_id, user_id=user_id)
             
+            # Check if user is member
             if member.status in (
                 ChatMemberStatus.MEMBER,
                 ChatMemberStatus.ADMINISTRATOR,
@@ -381,22 +403,31 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ):
                 verified_users.add(user_id)
                 logger.info(f"✅ User {user_id} verified successfully")
+                
+                # Try to delete verification message
                 try:
                     await query.message.delete()
                 except Exception:
                     pass
+                
+                # Show home screen
                 await open_home(update, context)
                 return
+            
+            # User not in channel yet
+            await query.answer("❌ Join the channel first!", show_alert=True)
+            return
+            
         except Exception as e:
-            logger.debug(f"Verification check failed: {e}")
-        
-        # User still not member
-        await query.answer("❌ You haven't joined the channel yet!", show_alert=True)
-        return
-    # Handle other callback actions first
+            logger.error(f"Verification error: {e}")
+            await query.answer("❌ Verification failed!", show_alert=True)
+            return
+    
+    # Handle close button
     if query.data == "close_banner":
-        logger.info(f"❌ Close banner for user {user_id}")
+        logger.info(f"❌ User {user_id} closed banner")
         try:
+
             await query.answer()
             await query.message.delete()
         except Exception as e:
