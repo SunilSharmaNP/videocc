@@ -223,8 +223,8 @@ async def check_admin_and_banned(update: Update, user_id_to_check: int = None) -
 
 async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """
-    Check if user has joined the required channel.
-    FileStreamBot-style implementation with proper verification.
+    Check if user has verified through force-sub.
+    Only checks verified_users set - actual membership verification happens in callback handler.
     """
     user_id = update.effective_user.id
 
@@ -236,15 +236,19 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not FORCE_SUB_CHANNEL_ID:
         return True
 
-    # If user already verified, allow access
+    # If user already verified through verify button, allow access
     if user_id in verified_users:
+        logger.info(f"✅ User {user_id} already verified (cached)")
         return True
 
+    logger.info(f"🔒 User {user_id} not verified yet - showing join prompt")
+
+    # User not verified - show join prompt
     try:
-        # Parse channel ID - handle both formats
         channel_id_str = str(FORCE_SUB_CHANNEL_ID).strip()
-        logger.info(f"🔧 Force-sub check | User: {user_id} | Channel config: {channel_id_str}")
+        logger.info(f"📌 Channel config: {channel_id_str}")
         
+        # Parse channel ID
         try:
             if channel_id_str.startswith("-"):
                 channel_chat_id = int(channel_id_str)
@@ -256,46 +260,8 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         except Exception as parse_err:
             logger.error(f"❌ Channel ID parse error: {parse_err}")
             channel_chat_id = channel_id_str
-        
-        logger.info(f"📌 Parsed channel ID: {channel_chat_id} (type: {type(channel_chat_id).__name__})")
-        
-        # Check if user is a member
-        try:
-            logger.info(f"🔎 Getting chat member: user {user_id} in chat {channel_chat_id}")
-            member = await context.bot.get_chat_member(chat_id=channel_chat_id, user_id=user_id)
-            logger.info(f"📊 Member status: {member.status}")
-            
-            # Check membership status
-            if member.status in (
-                ChatMemberStatus.MEMBER,
-                ChatMemberStatus.ADMINISTRATOR,
-                ChatMemberStatus.OWNER
-            ):
-                verified_users.add(user_id)
-                logger.info(f"✅ User {user_id} verified as channel member")
-                return True
-            
-            # User is kicked/restricted
-            if member.status == ChatMemberStatus.KICKED:
-                logger.warning(f"⛔ User {user_id} is kicked from channel")
-                
-                try:
-                    if update.message:
-                        await update.message.reply_text(
-                            "🚫 <b>Blocked</b>\n\nYou are blocked from using this bot.",
-                            parse_mode="HTML"
-                        )
-                    elif update.callback_query:
-                        await update.callback_query.answer("❌ You are blocked!", show_alert=True)
-                except Exception:
-                    pass
-                return False
-            
-        except Exception as e:
-            logger.warning(f"⚠️ Member check exception: {type(e).__name__}: {e}")
-            # User might not be in channel - proceed to show join prompt
 
-        # User is not member - show join prompt
+        # Get channel info
         try:
             logger.info(f"📍 Getting chat info for {channel_chat_id}")
             chat = await context.bot.get_chat(channel_chat_id)
@@ -327,10 +293,9 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             
         except Exception as e:
             logger.error(f"Could not get chat info: {e}")
-            # Fail open on error
-            return True
+            return True  # Fail open
 
-        # Build keyboard with proper styling
+        # Build keyboard
         kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("📢 Join Channel", url=invite_link)],
             [
