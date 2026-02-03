@@ -45,6 +45,7 @@ if not TOKEN:
 OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 FORCE_SUB_CHANNEL_ID = os.environ.get("FORCE_SUB_CHANNEL_ID")
 FORCE_SUB_BANNER_URL = os.environ.get("FORCE_SUB_BANNER_URL")
+HOME_MENU_BANNER_URL = os.environ.get("HOME_MENU_BANNER_URL")
 OWNER_USERNAME = os.environ.get("OWNER_USERNAME", "")
 LOG_CHANNEL_ID = os.environ.get("LOG_CHANNEL_ID")
 
@@ -343,19 +344,61 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         )
 
         try:
+            banner = FORCE_SUB_BANNER_URL
+            
             if update.message:
-                await update.message.reply_text(
-                    prompt,
-                    reply_markup=kb,
-                    parse_mode="HTML"
-                )
+                # Send with banner if available
+                if banner:
+                    try:
+                        if isinstance(banner, str) and os.path.isfile(banner):
+                            await update.message.reply_photo(
+                                photo=InputFile(banner),
+                                caption=prompt,
+                                reply_markup=kb,
+                                parse_mode="HTML"
+                            )
+                        else:
+                            await update.message.reply_photo(
+                                photo=banner,
+                                caption=prompt,
+                                reply_markup=kb,
+                                parse_mode="HTML"
+                            )
+                    except Exception as banner_err:
+                        logger.warning(f"Could not send banner, sending text instead: {banner_err}")
+                        await update.message.reply_text(
+                            prompt,
+                            reply_markup=kb,
+                            parse_mode="HTML"
+                        )
+                else:
+                    await update.message.reply_text(
+                        prompt,
+                        reply_markup=kb,
+                        parse_mode="HTML"
+                    )
             elif update.callback_query:
-                await update.callback_query.message.edit_text(
-                    prompt,
-                    reply_markup=kb,
-                    parse_mode="HTML"
-                )
-            logger.info(f"🔒 Force-sub prompt shown to user {user_id}")
+                # Edit message with banner
+                if banner:
+                    try:
+                        await update.callback_query.message.edit_caption(
+                            caption=prompt,
+                            reply_markup=kb,
+                            parse_mode="HTML"
+                        )
+                    except Exception:
+                        await update.callback_query.message.edit_text(
+                            prompt,
+                            reply_markup=kb,
+                            parse_mode="HTML"
+                        )
+                else:
+                    await update.callback_query.message.edit_text(
+                        prompt,
+                        reply_markup=kb,
+                        parse_mode="HTML"
+                    )
+            logger.info(f"🔒 Force-sub prompt shown to user {user_id} with banner")
         except Exception as e:
             logger.error(f"Failed to show prompt: {e}")
             return True
