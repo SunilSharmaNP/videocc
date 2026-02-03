@@ -1559,6 +1559,7 @@ def main() -> None:
             BotCommand("unban", "✅ Unban user"),
             BotCommand("stats", "📊 Bot statistics"),
             BotCommand("status", "⏱️ Bot status"),
+            BotCommand("broadcast", "📢 Broadcast message"),
         ]
         
         try:
@@ -1584,6 +1585,7 @@ def main() -> None:
     app.add_handler(CommandHandler("unban", unban_cmd, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("stats", stats_cmd, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("status", status_cmd, filters=filters.ChatType.PRIVATE))
+    app.add_handler(CommandHandler("broadcast", broadcast_cmd, filters=filters.ChatType.PRIVATE))
 
     # Photo and video handlers (private chats only via filters)
     app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, photo_handler))
