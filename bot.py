@@ -542,6 +542,36 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         return
     
+    if query.data == "admin_users":
+        if not is_admin(user_id):
+            await query.answer("❌ Unauthorized", show_alert=True)
+            return
+        await query.answer()
+        stats = get_stats()
+        total_users = stats['total_users']
+        banned_users = stats['banned_users']
+        active_users = total_users - banned_users
+        
+        text = (
+            "👥 <b>User Management</b>\n\n"
+            f"📊 <b>Total Users:</b> <code>{total_users}</code>\n"
+            f"✅ <b>Active Users:</b> <code>{active_users}</code>\n"
+            f"🚫 <b>Banned Users:</b> <code>{banned_users}</code>\n\n"
+            f"📈 <b>Ban Rate:</b> <code>{(banned_users/total_users*100):.1f}%</code>"
+        )
+        back_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("⬅️ Back", callback_data="admin_back")]
+        ])
+        try:
+            msg = query.message
+            if getattr(msg, "photo", None):
+                await msg.edit_caption(text, reply_markup=back_kb, parse_mode="HTML")
+            else:
+                await msg.edit_text(text, reply_markup=back_kb, parse_mode="HTML")
+        except Exception:
+            pass
+        return
+    
     if query.data == "admin_status":
         if not is_admin(user_id):
             await query.answer("❌ Unauthorized", show_alert=True)
@@ -1306,10 +1336,11 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     admin_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 Statistics", callback_data="admin_stats"),
          InlineKeyboardButton("⏱️ Status", callback_data="admin_status")],
-        [InlineKeyboardButton("🚫 Ban User", callback_data="admin_ban"),
-         InlineKeyboardButton("✅ Unban User", callback_data="admin_unban")],
-        [InlineKeyboardButton("📢 Broadcast", callback_data="admin_broadcast"),
-         InlineKeyboardButton("⬅️ Back", callback_data="menu_back")],
+        [InlineKeyboardButton("� Users", callback_data="admin_users"),
+         InlineKeyboardButton("🚫 Ban User", callback_data="admin_ban")],
+        [InlineKeyboardButton("✅ Unban User", callback_data="admin_unban"),
+         InlineKeyboardButton("📢 Broadcast", callback_data="admin_broadcast")],
+        [InlineKeyboardButton("⬅️ Back", callback_data="menu_back")],
     ])
     
     # Get home menu banner
