@@ -1000,7 +1000,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         kb_rows.append([InlineKeyboardButton("🛡️ Admin Panel", callback_data="admin_back")])
     
     kb = InlineKeyboardMarkup(kb_rows)
-    banner = get_force_banner() if 'get_force_banner' in globals() else None
+    banner = HOME_MENU_BANNER_URL
     
     # Handle both callback_query and regular message
     if update.callback_query:
