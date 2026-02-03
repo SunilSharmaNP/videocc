@@ -354,10 +354,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Handle force-sub verification button
     if query.data == "check_fsub":
         logger.info(f"🔍 Verify button clicked by user {user_id}")
-        await query.answer()
         
         if not FORCE_SUB_CHANNEL_ID:
             logger.warning("⚠️ FORCE_SUB_CHANNEL_ID not configured")
+            await query.answer("✅ Bot configured successfully!", show_alert=False)
             await open_home(update, context)
             return
         
@@ -383,8 +383,13 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.info(f"🔎 Checking membership for user {user_id} in channel {channel_id}")
             
             # Direct membership check
-            member = await context.bot.get_chat_member(chat_id=channel_id, user_id=user_id)
-            logger.info(f"📊 Member status: {member.status}")
+            try:
+                member = await context.bot.get_chat_member(chat_id=channel_id, user_id=user_id)
+                logger.info(f"📊 Member status: {member.status}")
+            except Exception as member_error:
+                logger.error(f"❌ Error checking membership: {member_error}")
+                await query.answer("❌ Channel check failed! Try again later.", show_alert=True)
+                return
             
             # Check if user is member
             if member.status in (
@@ -394,6 +399,9 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ):
                 verified_users.add(user_id)
                 logger.info(f"✅ User {user_id} verified successfully with status {member.status}")
+                
+                # Show success alert
+                await query.answer("✅ Channel verified successfully!", show_alert=False)
                 
                 # Try to delete verification message
                 try:
@@ -409,12 +417,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # User not in channel yet
             logger.warning(f"⚠️ User {user_id} not a member. Status: {member.status}")
-            await query.answer("❌ Join the channel first!", show_alert=True)
+            await query.answer("❌ Join the channel first!\n\nPlease join the channel and then click Verify.", show_alert=True)
             return
             
         except Exception as e:
             logger.error(f"❌ Verification error: {type(e).__name__}: {e}", exc_info=True)
-            await query.answer("❌ Verification failed! Please try again.", show_alert=True)
+            await query.answer("❌ Verification failed!\n\nPlease make sure you joined the channel first.", show_alert=True)
             return
     
     # Handle close button
