@@ -1295,7 +1295,13 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     text = (
         "🛡️ " + fancy_text("Admin Control Panel") + "\n\n"
-        "Choose an option:"
+        "👑 <b>Welcome Admin!</b>\n\n"
+        "You have full access to all bot management tools:\n\n"
+        "📊 View detailed statistics\n"
+        "⏱️ Monitor bot performance\n"
+        "🚫 Ban/Unban users\n"
+        "📢 Send announcements to all users\n\n"
+        "Choose an option below:"
     )
     admin_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 Statistics", callback_data="admin_stats"),
@@ -1305,6 +1311,30 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📢 Broadcast", callback_data="admin_broadcast"),
          InlineKeyboardButton("⬅️ Back", callback_data="menu_back")],
     ])
+    
+    # Get home menu banner
+    banner = HOME_MENU_BANNER_URL
+    
+    if banner:
+        try:
+            if isinstance(banner, str) and os.path.isfile(banner):
+                await update.message.reply_photo(
+                    photo=InputFile(banner),
+                    caption=text,
+                    reply_markup=admin_kb,
+                    parse_mode="HTML"
+                )
+            else:
+                await update.message.reply_photo(
+                    photo=banner,
+                    caption=text,
+                    reply_markup=admin_kb,
+                    parse_mode="HTML"
+                )
+            return
+        except Exception as e:
+            logger.warning(f"Could not send admin menu banner: {e}")
+    
     await update.message.reply_text(text, reply_markup=admin_kb, parse_mode="HTML")
 
 
