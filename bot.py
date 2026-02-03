@@ -223,8 +223,8 @@ async def check_admin_and_banned(update: Update, user_id_to_check: int = None) -
 
 async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """
-    Check if user has verified through force-sub.
-    Only checks verified_users set - actual membership verification happens in callback handler.
+    Check if user has verified through force-sub AND is still a member.
+    Verifies membership for cached users to ensure they haven't left the channel.
     """
     user_id = update.effective_user.id
 
@@ -236,12 +236,43 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not FORCE_SUB_CHANNEL_ID:
         return True
 
-    # If user already verified through verify button, allow access
+    # If user already verified through verify button, verify they're still a member
     if user_id in verified_users:
-        logger.info(f"✅ User {user_id} already verified (cached)")
-        return True
-
-    logger.info(f"🔒 User {user_id} not verified yet - showing join prompt")
+        logger.info(f"🔍 User {user_id} is cached - checking if still a member...")
+        
+        try:
+            channel_id_str = str(FORCE_SUB_CHANNEL_ID).strip()
+            
+            # Parse channel ID
+            try:
+                if channel_id_str.startswith("-"):
+                    channel_id = int(channel_id_str)
+                else:
+                    try:
+                        channel_id = int(channel_id_str)
+                    except ValueError:
+                        channel_id = channel_id_str
+            except Exception:
+                channel_id = channel_id_str
+            
+            # Check current membership status
+            member = await context.bot.get_chat_member(chat_id=channel_id, user_id=user_id)
+            
+            # If still a member, allow access
+            if member.status in (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER):
+                logger.info(f"✅ User {user_id} is still a member - access granted")
+                return True
+            
+            # If no longer a member, remove from cache and show join prompt
+            logger.warning(f"⚠️ User {user_id} left the channel - removing from cache")
+            verified_users.discard(user_id)
+            
+        except Exception as e:
+            logger.warning(f"Could not verify membership for cached user {user_id}: {e}")
+            # On error, remove from cache to be safe
+            verified_users.discard(user_id)
+    
+    logger.info(f"🔒 User {user_id} not verified or left channel - showing join prompt")
 
     # User not verified - show join prompt
     try:
