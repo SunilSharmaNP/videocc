@@ -888,22 +888,70 @@ async def open_home(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("⚙️ Settings", callback_data="menu_settings"),
          InlineKeyboardButton("👨‍💻 Developer", callback_data="menu_developer")],
     ])
+    
+    # Get home menu banner
+    home_banner = HOME_MENU_BANNER_URL
 
     if update.callback_query:
         msg = update.callback_query.message
         try:
-            if msg.photo:
-                await msg.edit_caption(text, reply_markup=kb, parse_mode="HTML")
+            # Always delete old message first and send new one with home banner
+            try:
+                await msg.delete()
+            except Exception:
+                pass
+            
+            if home_banner:
+                # Send with banner
+                try:
+                    if isinstance(home_banner, str) and os.path.isfile(home_banner):
+                        photo = InputFile(home_banner)
+                    else:
+                        photo = home_banner
+                    
+                    await context.bot.send_photo(
+                        chat_id=msg.chat.id,
+                        photo=photo,
+                        caption=text,
+                        reply_markup=kb,
+                        parse_mode="HTML"
+                    )
+                except Exception as banner_err:
+                    logger.warning(f"Could not send home banner: {banner_err}")
+                    await context.bot.send_message(
+                        chat_id=msg.chat.id,
+                        text=text,
+                        reply_markup=kb,
+                        parse_mode="HTML"
+                    )
             else:
-                await msg.edit_text(text, reply_markup=kb, parse_mode="HTML")
-        except:
-            await context.bot.send_message(
-                chat_id=msg.chat.id,
-                text=text,
-                reply_markup=kb,
-                parse_mode="HTML"
-            )
+                await context.bot.send_message(
+                    chat_id=msg.chat.id,
+                    text=text,
+                    reply_markup=kb,
+                    parse_mode="HTML"
+                )
+        except Exception as e:
+            logger.warning(f"Error sending home menu: {e}")
+            try:
+                await context.bot.send_message(
+                    chat_id=msg.chat.id,
+                    text=text,
+                    reply_markup=kb,
+                    parse_mode="HTML"
+                )
+            except Exception:
+                pass
     else:
+        if home_banner:
+            try:
+                if isinstance(home_banner, str) and os.path.isfile(home_banner):
+                    await update.message.reply_photo(photo=InputFile(home_banner), caption=text, reply_markup=kb, parse_mode="HTML")
+                else:
+                    await update.message.reply_photo(photo=home_banner, caption=text, reply_markup=kb, parse_mode="HTML")
+                return
+            except Exception as e:
+                logger.warning(f"Could not send home banner: {e}")
         await update.message.reply_text(text, reply_markup=kb, parse_mode="HTML")
 
 
