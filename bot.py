@@ -1427,6 +1427,100 @@ async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Error: {e}")
 
 
+async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Broadcast message to all users - usage: /broadcast <message>"""
+    if not await check_admin(update):
+        return
+    
+    args = update.message.text.split(None, 1)
+    if len(args) < 2:
+        return await update.message.reply_text(
+            "❌ <b>Usage:</b> /broadcast <message>\n\n"
+            "<b>Example:</b> /broadcast Hello everyone! Check out new features!\n\n"
+            "💡 <b>Tips:</b>\n"
+            "• Message will be sent to all active users\n"
+            "• HTML formatting is supported\n"
+            "• Emojis work great too! 🎉",
+            parse_mode="HTML"
+        )
+    
+    message_text = args[1]
+    
+    # Show confirmation
+    confirm_text = (
+        "📢 <b>Broadcast Confirmation</b>\n\n"
+        f"<b>Message to send:</b>\n"
+        f"{message_text}\n\n"
+        f"👥 Total Users: <b>{get_total_users()}</b>\n\n"
+        "⚠️ This action cannot be undone!\n"
+        "Proceeding... Messages will be sent now."
+    )
+    msg = await update.message.reply_text(confirm_text, parse_mode="HTML")
+    
+    try:
+        # Get all user IDs from database
+        from database import db
+        users_collection = db.get_collection("users")
+        all_users = users_collection.find({}, {"user_id": 1})
+        
+        user_ids = [user["user_id"] for user in all_users if "user_id" in user]
+        
+        if not user_ids:
+            await msg.edit_text(
+                "❌ <b>No Users Found</b>\n\n"
+                "There are no users in the database to broadcast to.",
+                parse_mode="HTML"
+            )
+            return
+        
+        # Send message to all users
+        sent = 0
+        failed = 0
+        
+        for user_id in user_ids:
+            try:
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=f"📢 <b>Announcement from Admin</b>\n\n{message_text}",
+                    parse_mode="HTML"
+                )
+                sent += 1
+            except Exception as e:
+                logger.warning(f"Could not send broadcast to user {user_id}: {e}")
+                failed += 1
+        
+        # Show final status
+        result_text = (
+            "✅ <b>Broadcast Completed!</b>\n\n"
+            f"📤 <b>Messages Sent:</b> {sent}\n"
+            f"❌ <b>Failed:</b> {failed}\n"
+            f"👥 <b>Total Users:</b> {sent + failed}\n\n"
+            f"Success Rate: <b>{(sent/(sent+failed)*100):.1f}%</b>"
+        )
+        
+        await msg.edit_text(result_text, parse_mode="HTML")
+        
+        # Log broadcast
+        if LOG_CHANNEL_ID:
+            log_text = (
+                f"📢 <b>Broadcast Sent</b>\n\n"
+                f"👤 Admin: @{update.message.from_user.username or update.message.from_user.id}\n"
+                f"📤 Messages Sent: {sent}\n"
+                f"❌ Failed: {failed}\n"
+                f"📝 Message:\n{message_text}"
+            )
+            await send_log(context, log_text)
+        
+    except Exception as e:
+        await msg.edit_text(
+            f"❌ <b>Broadcast Failed</b>\n\n"
+            f"Error: {str(e)[:100]}\n\n"
+            "Check logs for details.",
+            parse_mode="HTML"
+        )
+        logger.error(f"Broadcast error: {e}", exc_info=True)
+
+
 
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle text messages"""
