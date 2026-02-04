@@ -339,10 +339,10 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Build prompt message
         prompt = (
             "� <b>Channel Verification Required</b>\n\n"
-            f"To access all features of this bot, you must join our community channel:\n\n"
+            f"To Access All Features Of This Bot, You Must Join Our Community Channel:\n\n"
             f"<b>📢 {channel_name}</b>\n\n"
-            "We share exclusive updates, tips, and announcements there.\n\n"
-            "👇 <b>Join the channel and verify to continue</b> 👇"
+            "We Share Exclusive Updates, Tips, And Announcements There.\n\n"
+            "👇 <b>Join The Channel And Verify To Continue</b> 👇"
         )
 
         try:
@@ -493,12 +493,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # User not in channel yet
             logger.warning(f"⚠️ User {user_id} not a member. Status: {member.status}")
-            await query.answer("❌ Join the channel first!\n\nPlease join the channel and then click Verify.", show_alert=True)
+            await query.answer("❌ Join The Channel First!\n\nPlease Join The Channel And Then Click Verify.", show_alert=True)
             return
             
         except Exception as e:
             logger.error(f"❌ Verification error: {type(e).__name__}: {e}", exc_info=True)
-            await query.answer("❌ Verification failed!\n\nPlease make sure you joined the channel first.", show_alert=True)
+            await query.answer("❌ Verification Failed!\n\nPlease Make Sure You Joined The Channel First.", show_alert=True)
             return
     
     # Handle close button
@@ -718,27 +718,27 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if key == "help":
                 text = (
                     "ℹ️ " + fancy_text("Help Menu") + "\n\n"
-                    "1️⃣ Send a <b>photo</b> → thumbnail saved\n"
-                    "2️⃣ Send a <b>video</b> → cover applied\n\n"
+                    "1️⃣ Send A <b>Photo</b> → Thumbnail Saved\n"
+                    "2️⃣ Send A <b>Video</b> → Cover Applied\n\n"
                     "<b>Commands:</b>\n"
-                    "/remove – Remove saved thumbnail\n"
-                    "/settings – View bot settings\n"
-                    "/about – About this bot"
+                    "/Remove – Remove Saved Thumbnail\n"
+                    "/Settings – View Bot Settings\n"
+                    "/About – About This Bot"
                 )
             elif key == "about":
                 text = (
                     "🤖 " + fancy_text("Instant Video Cover Bot") + "\n\n"
                     "✨ Features:\n"
-                    "• Instant thumbnail apply\n"
-                    "• One thumbnail per user\n"
-                    "• Fast & simple\n\n"
-                    "🛠 Powered by python-telegram-bot"
+                    "• Instant Thumbnail Apply\n"
+                    "• One Thumbnail Per User\n"
+                    "• Fast & Simple\n\n"
+                    "🛠 Powered By Python-Telegram-Bot"
                 )
             elif key == "settings":
                 uid = query.from_user.id
                 text = (
                     "⚙️ " + fancy_text("Settings") + "\n\n"
-                    "Choose what you want to manage:"
+                    "Choose What You Want To Manage:"
                 )
                 # Add settings submenus buttons
                 settings_kb = InlineKeyboardMarkup([
@@ -759,7 +759,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 text = (
                     "👨‍💻 <b>Developer</b>\n\n"
                     f"Contact: {dev_contact}\n"
-                    "If you need help, reach out to the developer."
+                    "If You Need Help, Reach Out To The Developer."
                 )
             else:
                 text = (
@@ -797,11 +797,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"<b>Current Status:</b> {thumb_status}\n\n"
             "📚 <b>Available Actions:</b>\n\n"
             "💾 Save Thumbnail\n"
-            "Upload a new photo as your video cover\n\n"
+            "Upload A New Photo As Your Video Cover\n\n"
             "👁️ Show Thumbnail\n"
-            "Preview your currently saved thumbnail\n\n"
+            "Preview Your Currently Saved Thumbnail\n\n"
             "🗑️ Delete Thumbnail\n"
-            "Remove your saved thumbnail"
+            "Remove Your Saved Thumbnail"
         )
         thumb_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("💾 Save Thumbnail", callback_data="thumb_save_info"),
@@ -826,19 +826,19 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = (
             "💾 <b>Save Your Thumbnail</b>\n\n"
             "<b>📸 How It Works:</b>\n\n"
-            "Step 1️⃣: Send a Photo\n"
-            "Go back and send any photo to the bot\n"
-            "This will be your video cover\n\n"
+            "Step 1️⃣: Send A Photo\n"
+            "Go Back And Send Any Photo To The Bot\n"
+            "This Will Be Your Video Cover\n\n"
             "Step 2️⃣: Automatic Save\n"
-            "The thumbnail is saved automatically\n"
-            "One per user - replace anytime\n\n"
-            "Step 3️⃣: Ready to Use\n"
-            "Send any video and the cover applies instantly!\n\n"
+            "The Thumbnail Is Saved Automatically\n"
+            "One Per User - Replace Anytime\n\n"
+            "Step 3️⃣: Ready To Use\n"
+            "Send Any Video And The Cover Applies Instantly!\n\n"
             "💡 <b>Tips:</b>\n"
-            "• Use high-resolution images\n"
-            "• Square format (1:1) works best\n"
-            "• Max 5MB file size\n\n"
-            "Ready? Send your photo now! 📸"
+            "• Use High-Resolution Images\n"
+            "• Square Format (1:1) Works Best\n"
+            "• Max 5MB File Size\n\n"
+            "Ready? Send Your Photo Now! 📸"
         )
         back_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("⬅️ Back", callback_data="submenu_thumbnails")]
@@ -857,7 +857,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer()
         photo_id = get_thumbnail(user_id)
         if photo_id:
-            text = "👁️ <b>Your Current Thumbnail</b>\n\nThis is the photo that will be applied to your videos. You can change it anytime by uploading a new one!"
+            text = "👁️ <b>Your Current Thumbnail</b>\n\nThis Is The Photo That Will Be Applied To Your Videos. You Can Change It Anytime By Uploading A New One!"
             back_kb = InlineKeyboardMarkup([
                 [InlineKeyboardButton("⬅️ Back", callback_data="submenu_thumbnails")]
             ])
@@ -893,7 +893,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "thumb_delete":
         await query.answer()
         if delete_thumbnail(user_id):
-            text = "✅ <b>Thumbnail Deleted Successfully</b>\n\nYour saved thumbnail has been removed from the system. You can upload a new one anytime!"
+            text = "✅ <b>Thumbnail Deleted Successfully</b>\n\nYour Saved Thumbnail Has Been Removed From The System. You Can Upload A New One Anytime!"
         else:
             text = "⚠️ <b>No Thumbnail Found</b>\n\nYou Don't Have A Saved Thumbnail Yet. Send A Photo To Create One!"
         back_kb = InlineKeyboardMarkup([
@@ -920,19 +920,19 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def open_home(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
-        fancy_text("Welcome to Instant Cover Bot") + "\n\n"
+        fancy_text("Welcome To Instant Cover Bot") + "\n\n"
         "🎬 <b>Professional Video Cover Tool</b>\n\n"
-        "✨ <b>What you can do:</b>\n"
-        "📸 Upload a <b>photo</b> as your thumbnail\n"
-        "🎥 Send a <b>video</b> to apply the cover instantly\n\n"
+        "✨ <b>What You Can Do:</b>\n"
+        "📸 Upload A <b>Photo</b> As Your Thumbnail\n"
+        "🎥 Send A <b>Video</b> To Apply The Cover Instantly\n\n"
         "⚡ Features:\n"
-        "⚙️ One-click thumbnail application\n"
-        "🎨 Professional video covers\n"
-        "📁 Automatic thumbnail management\n\n"
+        "⚙️ One-Click Thumbnail Application\n"
+        "🎨 Professional Video Covers\n"
+        "📁 Automatic Thumbnail Management\n\n"
         "🧭 <b>Quick Links:</b>\n"
-        "/help – Learn how to use\n"
-        "/settings – Manage your content\n"
-        "/about – About this bot"
+        "/Help – Learn How To Use\n"
+        "/Settings – Manage Your Content\n"
+        "/About – About This Bot"
     )
 
     kb = InlineKeyboardMarkup([
@@ -1032,19 +1032,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     text = (
-        fancy_text("Welcome to Instant Cover Bot") + "\n\n"
+        fancy_text("Welcome To Instant Cover Bot") + "\n\n"
         "🎬 <b>Professional Video Cover Tool</b>\n\n"
-        "✨ <b>What you can do:</b>\n"
-        "📸 Upload a <b>photo</b> as your thumbnail\n"
-        "🎥 Send a <b>video</b> to apply the cover instantly\n\n"
+        "✨ <b>What You Can Do:</b>\n"
+        "📸 Upload A <b>Photo</b> As Your Thumbnail\n"
+        "🎥 Send A <b>Video</b> To Apply The Cover Instantly\n\n"
         "⚡ Features:\n"
-        "⚙️ One-click thumbnail application\n"
-        "🎨 Professional video covers\n"
-        "📁 Automatic thumbnail management\n\n"
+        "⚙️ One-Click Thumbnail Application\n"
+        "🎨 Professional Video Covers\n"
+        "📁 Automatic Thumbnail Management\n\n"
         "🧭 <b>Quick Links:</b>\n"
-        "/help – Learn how to use\n"
-        "/settings – Manage your content\n"
-        "/about – About this bot"
+        "/Help – Learn How To Use\n"
+        "/Settings – Manage Your Content\n"
+        "/About – About This Bot"
     )
     # Build home menu with all buttons
     kb_rows = [
@@ -1097,21 +1097,21 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
     text = (
-        "📖 <b>How to Use Instant Cover Bot</b>\n\n"
-        "🎯 <b>Step-by-Step Guide:</b>\n\n"
+        "📖 <b>How To Use Instant Cover Bot</b>\n\n"
+        "🎯 <b>Step-By-Step Guide:</b>\n\n"
         "1️⃣ <b>Upload Your Thumbnail</b>\n"
-        "   Send a photo that you want as your video cover\n"
-        "   The photo will be saved automatically\n\n"
-        "2️⃣ <b>Apply to Videos</b>\n"
-        "   Send any video to the bot\n"
-        "   The saved thumbnail will be applied instantly\n\n"
+        "   Send A Photo That You Want As Your Video Cover\n"
+        "   The Photo Will Be Saved Automatically\n\n"
+        "2️⃣ <b>Apply To Videos</b>\n"
+        "   Send Any Video To The Bot\n"
+        "   The Saved Thumbnail Will Be Applied Instantly\n\n"
         "3️⃣ <b>Download & Share</b>\n"
-        "   Your video with the cover is ready to download\n\n"
+        "   Your Video With The Cover Is Ready To Download\n\n"
         "💡 <b>Pro Tips:</b>\n"
-        "• High-quality photos work best\n"
-        "• Update your thumbnail anytime\n"
-        "• Remove old thumbnails from Settings\n\n"
-        "❓ Need more help? Contact support or check /about"
+        "• High-Quality Photos Work Best\n"
+        "• Update Your Thumbnail Anytime\n"
+        "• Remove Old Thumbnails From Settings\n\n"
+        "❓ Need More Help? Contact Support Or Check /About"
     )
     banner = get_force_banner() if 'get_force_banner' in globals() else None
     if banner:
@@ -1130,22 +1130,22 @@ async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "🤖 <b>About Instant Cover Bot</b>\n\n"
         "📝 <b>Description:</b>\n"
-        "A powerful and intuitive tool for applying custom thumbnails to your videos.\n\n"
+        "A Powerful And Intuitive Tool For Applying Custom Thumbnails To Your Videos.\n\n"
         "⭐ <b>Key Features:</b>\n"
-        "✅ Lightning-fast thumbnail application\n"
-        "✅ One photo per user storage\n"
-        "✅ Professional video covers\n"
-        "✅ Easy-to-use interface\n"
-        "✅ Instant processing\n\n"
+        "✅ Lightning-Fast Thumbnail Application\n"
+        "✅ One Photo Per User Storage\n"
+        "✅ Professional Video Covers\n"
+        "✅ Easy-To-Use Interface\n"
+        "✅ Instant Processing\n\n"
         "🛠️ <b>Technology:</b>\n"
-        "Built with Python & Telegram Bot API\n"
-        "Powered by FFmpeg for video processing\n\n"
+        "Built With Python & Telegram Bot API\n"
+        "Powered By FFmpeg For Video Processing\n\n"
         "📊 <b>Statistics:</b>\n"
-        f"👥 Active Users: Check with /stats\n\n"
+        f"👥 Active Users: Check With /Stats\n\n"
         "💬 <b>Support & Contact:</b>\n"
         f"👨‍💻 Developer: @{OWNER_USERNAME or 'contact_owner'}\n"
-        "📧 For issues or suggestions, reach out anytime\n\n"
-        "Thank you for using Instant Cover Bot! 🎬"
+        "📧 For Issues Or Suggestions, Reach Out Anytime\n\n"
+        "Thank You For Using Instant Cover Bot! 🎬"
     )
     banner = get_force_banner() if 'get_force_banner' in globals() else None
     if banner:
@@ -1171,7 +1171,7 @@ async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"User ID: <code>{user_id}</code>\n\n"
         "🖼️ <b>Thumbnail Status:</b>\n"
         f"<b>{thumb_status}</b>\n\n"
-        "📋 <b>What you can manage:</b>"
+        "📋 <b>What You Can Manage:</b>"
     )
     settings_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("🖼 Thumbnails", callback_data="submenu_thumbnails")],
