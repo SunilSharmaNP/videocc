@@ -166,19 +166,17 @@ async def get_invite_link(bot, chat_id):
 """--------------------ADMIN CHECK-----------------"""
 
 def fancy_text(text: str) -> str:
-    """Convert text to fancy Unicode styled text (Bold Sans-Serif Italic)
+    """Convert text to cool fancy font style (Small caps)
     
     Example: 
-        "Hello" -> "𝗛𝗲𝗹𝗹𝗼"
-        "Join Our Bot" -> "𝗝ᴏɪɴ 𝗢ᴜʀ 𝗕ᴏᴛ"
+        "Hello" -> "ʜᴇʟʟᴏ"
+        "Instant Cover Bot" -> "ɪɴsᴛᴀɴᴛ ᴄᴏᴠᴇʀ ʙᴏᴛ"
     """
-    # Unicode mapping for fancy bold italic sans-serif
-    # Uppercase: A-Z (Mathematical Alphanumeric Symbols)
-    uppercase = "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭"
-    # Lowercase: a-z (Small caps style with lowercase)
+    # Unicode mapping for small caps fancy style
+    # Uppercase: A-Z converted to small caps
+    uppercase = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘqʀsᴛᴜᴠᴡxʏᴢ"
+    # Lowercase: a-z (uses same mapping for consistency)
     lowercase = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘqʀsᴛᴜᴠᴡxʏᴢ"
-    # Digits: 0-9
-    digits = "𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵"
     
     result = ""
     for char in text:
@@ -186,8 +184,6 @@ def fancy_text(text: str) -> str:
             result += uppercase[ord(char) - ord('A')]
         elif 'a' <= char <= 'z':
             result += lowercase[ord(char) - ord('a')]
-        elif '0' <= char <= '9':
-            result += digits[ord(char) - ord('0')]
         else:
             result += char
     
@@ -338,7 +334,7 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         
         # Build prompt message
         prompt = (
-            "� <b>Channel Verification Required</b>\n\n"
+            "🔒 <b>Channel Verification Required</b>\n\n"
             f"To access all features of this bot, you must join our community channel:\n\n"
             f"<b>📢 {channel_name}</b>\n\n"
             "We share exclusive updates, tips, and announcements there.\n\n"
@@ -648,7 +644,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer()
         text = (
             "🛡️ " + fancy_text("Admin Control Panel") + "\n\n"
-            "Choose an option:"
+            "<b>Management Options:</b>\n\n"
+            "📊 <b>Statistics</b> – View user analytics\n"
+            "⏱️ <b>Status</b> – Bot performance\n"
+            "🚫 <b>Ban User</b> – Block users\n"
+            "✅ <b>Unban</b> – Restore access"
         )
         admin_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("📊 Statistics", callback_data="admin_stats"),
@@ -690,12 +690,13 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if key == "back":
             text = (
                 "👋 " + fancy_text("Welcome to Instant Cover Bot") + "\n\n"
-                "📸 Send a <b>photo</b> to set thumbnail\n"
-                "🎥 Send a <b>video</b> to get it with cover\n\n"
-                "🧩 <b>Commands:</b>\n"
-                "/help – How to use bot\n"
-                "/settings – Bot settings\n"
-                "/about – About this bot"
+                "<b>Quick Start Guide:</b>\n\n"
+                "📸 <b>Step 1:</b> Send a photo as thumbnail\n"
+                "🎥 <b>Step 2:</b> Send a video to apply cover\n\n"
+                "<b>Navigation:</b>\n"
+                "❓ /help – Usage guide\n"
+                "⚙️ /settings – Manage thumbnails\n"
+                "ℹ️ /about – Bot information"
             )
             kb_rows = [
                 [InlineKeyboardButton("❓ Help", callback_data="menu_help"),
@@ -718,27 +719,41 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if key == "help":
                 text = (
                     "ℹ️ " + fancy_text("Help Menu") + "\n\n"
-                    "1️⃣ Send a <b>photo</b> → thumbnail saved\n"
-                    "2️⃣ Send a <b>video</b> → cover applied\n\n"
-                    "<b>Commands:</b>\n"
-                    "/remove – Remove saved thumbnail\n"
-                    "/settings – View bot settings\n"
-                    "/about – About this bot"
+                    "<b>How to Use:</b>\n\n"
+                    "<b>1️⃣ Upload Thumbnail</b>\n"
+                    "   • Send any photo\n"
+                    "   • Automatically saved to profile\n\n"
+                    "<b>2️⃣ Apply to Video</b>\n"
+                    "   • Send a video file\n"
+                    "   • Thumbnail applied instantly\n\n"
+                    "<b>Additional Commands:</b>\n"
+                    "/remove – Delete saved thumbnail\n"
+                    "/settings – View & manage settings\n"
+                    "/about – Information about bot"
                 )
             elif key == "about":
                 text = (
                     "🤖 " + fancy_text("Instant Video Cover Bot") + "\n\n"
-                    "✨ Features:\n"
-                    "• Instant thumbnail apply\n"
-                    "• One thumbnail per user\n"
-                    "• Fast & simple\n\n"
-                    "🛠 Powered by python-telegram-bot"
+                    "<b>Premium Features:</b>\n\n"
+                    "✅ <b>One-Click Thumbnail</b>\n"
+                    "   Upload once, apply to unlimited videos\n\n"
+                    "✅ <b>Instant Processing</b>\n"
+                    "   Fast cover application\n\n"
+                    "✅ <b>Secure & Private</b>\n"
+                    "   Your data stays encrypted\n\n"
+                    "<b>Technology:</b>\n"
+                    "⚙️ Advanced Python API\n"
+                    "🔐 Secure Telegram Integration"
                 )
             elif key == "settings":
                 uid = query.from_user.id
                 text = (
                     "⚙️ " + fancy_text("Settings") + "\n\n"
-                    "Choose what you want to manage:"
+                    "<b>Manage Your Content:</b>\n\n"
+                    "🖼️ <b>Thumbnail Management</b>\n"
+                    "   • View current thumbnail\n"
+                    "   • Delete & upload new\n\n"
+                    "Select option to continue:"
                 )
                 # Add settings submenus buttons
                 settings_kb = InlineKeyboardMarkup([
@@ -921,18 +936,20 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def open_home(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         fancy_text("Welcome to Instant Cover Bot") + "\n\n"
-        "🎬 <b>Professional Video Cover Tool</b>\n\n"
-        "✨ <b>What you can do:</b>\n"
-        "📸 Upload a <b>photo</b> as your thumbnail\n"
-        "🎥 Send a <b>video</b> to apply the cover instantly\n\n"
-        "⚡ Features:\n"
-        "⚙️ One-click thumbnail application\n"
-        "🎨 Professional video covers\n"
-        "📁 Automatic thumbnail management\n\n"
-        "🧭 <b>Quick Links:</b>\n"
-        "/help – Learn how to use\n"
-        "/settings – Manage your content\n"
-        "/about – About this bot"
+        "<b>🎬 Professional Video Cover Tool</b>\n\n"
+        "<b>Quick Start:</b>\n\n"
+        "📸 <b>Upload Photo</b>\n"
+        "   Your thumbnail saves automatically\n\n"
+        "🎥 <b>Send Video</b>\n"
+        "   Thumbnail applies instantly\n\n"
+        "<b>Key Features:</b>\n"
+        "✅ One-click application\n"
+        "✅ High-quality covers\n"
+        "✅ Automatic management\n\n"
+        "<b>Commands:</b>\n"
+        "/help – Complete guide\n"
+        "/settings – Manage content\n"
+        "/about – More information"
     )
 
     kb = InlineKeyboardMarkup([
@@ -1033,18 +1050,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     text = (
         fancy_text("Welcome to Instant Cover Bot") + "\n\n"
-        "🎬 <b>Professional Video Cover Tool</b>\n\n"
-        "✨ <b>What you can do:</b>\n"
-        "📸 Upload a <b>photo</b> as your thumbnail\n"
-        "🎥 Send a <b>video</b> to apply the cover instantly\n\n"
-        "⚡ Features:\n"
-        "⚙️ One-click thumbnail application\n"
-        "🎨 Professional video covers\n"
-        "📁 Automatic thumbnail management\n\n"
-        "🧭 <b>Quick Links:</b>\n"
-        "/help – Learn how to use\n"
-        "/settings – Manage your content\n"
-        "/about – About this bot"
+        "<b>🎬 Professional Video Cover Tool</b>\n\n"
+        "<b>Quick Start:</b>\n\n"
+        "📸 <b>Upload Photo</b>\n"
+        "   Your thumbnail saves automatically\n\n"
+        "🎥 <b>Send Video</b>\n"
+        "   Thumbnail applies instantly\n\n"
+        "<b>Key Features:</b>\n"
+        "✅ One-click application\n"
+        "✅ High-quality covers\n"
+        "✅ Automatic management\n\n"
+        "<b>Commands:</b>\n"
+        "/help – Complete guide\n"
+        "/settings – Manage content\n"
+        "/about – More information"
     )
     # Build home menu with all buttons
     kb_rows = [
@@ -1097,21 +1116,22 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
     text = (
-        "📖 <b>How To Use Instant Cover Bot</b>\n\n"
-        "🎯 <b>Step-By-Step Guide:</b>\n\n"
-        "1️⃣ <b>Upload Your Thumbnail</b>\n"
-        "   Send A Photo That You Want As Your Video Cover\n"
-        "   The Photo Will Be Saved Automatically\n\n"
-        "2️⃣ <b>Apply To Videos</b>\n"
-        "   Send Any Video To The Bot\n"
-        "   The Saved Thumbnail Will Be Applied Instantly\n\n"
-        "3️⃣ <b>Download & Share</b>\n"
-        "   Your Video With The Cover Is Ready To Download\n\n"
-        "💡 <b>Pro Tips:</b>\n"
-        "• High-Quality Photos Work Best\n"
-        "• Update Your Thumbnail Anytime\n"
-        "• Remove Old Thumbnails From Settings\n\n"
-        "❓ Need More Help? Contact Support Or Check /About"
+        "📖 " + fancy_text("Complete Guide") + "\n\n"
+        "<b>Step-By-Step Instructions:</b>\n\n"
+        "<b>1️⃣ Upload Your Thumbnail</b>\n"
+        "   • Send a high-quality photo\n"
+        "   • It saves automatically as your cover\n\n"
+        "<b>2️⃣ Apply To Videos</b>\n"
+        "   • Send any video file\n"
+        "   • Cover applies instantly\n\n"
+        "<b>3️⃣ Download & Share</b>\n"
+        "   • Your video with cover is ready\n"
+        "   • Download and share anywhere\n\n"
+        "<b>💡 Pro Tips:</b>\n"
+        "✓ High-quality photos work best\n"
+        "✓ Update thumbnail anytime\n"
+        "✓ Remove old covers from settings\n\n"
+        "📞 Need help? Contact: /about"
     )
     banner = HOME_MENU_BANNER_URL
     if banner:
@@ -1128,24 +1148,24 @@ async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
     text = (
-        "🤖 <b>About Instant Cover Bot</b>\n\n"
-        "📝 <b>Description:</b>\n"
-        "A Powerful And Intuitive Tool For Applying Custom Thumbnails To Your Videos.\n\n"
-        "⭐ <b>Key Features:</b>\n"
-        "✅ Lightning-Fast Thumbnail Application\n"
-        "✅ One Photo Per User Storage\n"
-        "✅ Professional Video Covers\n"
-        "✅ Easy-To-Use Interface\n"
-        "✅ Instant Processing\n\n"
-        "🛠️ <b>Technology:</b>\n"
-        "Built With Python & Telegram Bot API\n"
-        "Powered By FFmpeg For Video Processing\n\n"
-        "📊 <b>Statistics:</b>\n"
-        f"👥 Active Users: Check With /Stats\n\n"
-        "💬 <b>Support & Contact:</b>\n"
-        f"👨‍💻 Developer: @{OWNER_USERNAME or 'contact_owner'}\n"
-        "📧 For Issues Or Suggestions, Reach Out Anytime\n\n"
-        "Thank You For Using Instant Cover Bot! 🎬"
+        "🤖 " + fancy_text("About This Bot") + "\n\n"
+        "<b>Professional Video Cover Tool</b>\n\n"
+        "<b>Description:</b>\n"
+        "Apply custom thumbnails to your videos instantly\n\n"
+        "<b>Premium Features:</b>\n"
+        "✅ Lightning-fast processing\n"
+        "✅ High-quality thumbnail storage\n"
+        "✅ Professional video covers\n"
+        "✅ Simple interface\n"
+        "✅ Instant results\n\n"
+        "<b>Technology Stack:</b>\n"
+        "⚙️ Advanced Python API\n"
+        "🎬 FFmpeg video processing\n"
+        "🤖 Telegram Bot Framework\n\n"
+        "<b>Support & Contact:</b>\n"
+        f"👨‍💻 Developer: @{OWNER_USERNAME or 'Support'}\n"
+        "📧 For help: /about → Developer\n\n"
+        "Thank you for using this bot! 🎬"
     )
     banner = HOME_MENU_BANNER_URL
     if banner:
@@ -1166,12 +1186,13 @@ async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     thumb_status = "✅ Saved & Ready" if has_thumbnail(user_id) else "❌ Not Saved Yet"
     
     text = (
-        "⚙️ <b>Settings & Preferences</b>\n\n"
-        "👤 <b>Your Account:</b>\n"
-        f"User ID: <code>{user_id}</code>\n\n"
-        "🖼️ <b>Thumbnail Status:</b>\n"
-        f"<b>{thumb_status}</b>\n\n"
-        "📋 <b>What You Can Manage:</b>"
+        "⚙️ " + fancy_text("Your Settings") + "\n\n"
+        "<b>Account Information:</b>\n"
+        f"👤 User ID: <code>{user_id}</code>\n\n"
+        "<b>Thumbnail Status:</b>\n"
+        f"{thumb_status}\n\n"
+        "<b>Management Options:</b>\n"
+        "🖼️ View and manage your thumbnails"
     )
     settings_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("🖼 Thumbnails", callback_data="submenu_thumbnails")],
@@ -1336,18 +1357,20 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     text = (
         "🛡️ " + fancy_text("Admin Control Panel") + "\n\n"
-        "👑 <b>Welcome Admin!</b>\n\n"
-        "You have full access to all bot management tools:\n\n"
-        "📊 View detailed statistics\n"
-        "⏱️ Monitor bot performance\n"
-        "🚫 Ban/Unban users\n"
-        "📢 Send announcements to all users\n\n"
-        "Choose an option below:"
+        "👑 <b>Welcome Admin</b>\n\n"
+        "<b>Management Tools Available:</b>\n\n"
+        "📊 <b>Statistics</b> – User analytics\n"
+        "⏱️ <b>Status</b> – Bot performance\n"
+        "👥 <b>Users</b> – Total users count\n"
+        "🚫 <b>Ban User</b> – Block users\n"
+        "✅ <b>Unban User</b> – Restore access\n"
+        "📢 <b>Broadcast</b> – Send announcements\n\n"
+        "Select an option:"
     )
     admin_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 Statistics", callback_data="admin_stats"),
          InlineKeyboardButton("⏱️ Status", callback_data="admin_status")],
-        [InlineKeyboardButton("� Users", callback_data="admin_users"),
+        [InlineKeyboardButton("👥 Users", callback_data="admin_users"),
          InlineKeyboardButton("🚫 Ban User", callback_data="admin_ban")],
         [InlineKeyboardButton("✅ Unban User", callback_data="admin_unban"),
          InlineKeyboardButton("📢 Broadcast", callback_data="admin_broadcast")],
