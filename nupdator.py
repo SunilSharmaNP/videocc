@@ -33,16 +33,23 @@ def update_from_upstream() -> bool:
     logger.info(f"🔄 Starting upstream update from {UPSTREAM_REPO} (branch: {UPSTREAM_BRANCH})...")
 
     cmds = [
-        ("git init --initial-branch=main", "Initialize git repository"),
-        ("git config user.name 'bot-updater'", "Set git user"),
-        ("git config user.email 'bot@localhost'", "Set git email"),
-        ("git add .", "Stage local changes"),
-        ("git commit -m 'local changes' || true", "Commit local changes (ignore if none)"),
-        (f"git remote remove origin || true", "Remove old remote (ignore if not exists)"),
+        # Skip git init - use git config directly to avoid hook permission issues
+        ("git config user.name 'bot-updater' || git config --global user.name 'bot-updater'", "Set git user"),
+        ("git config user.email 'bot@localhost' || git config --global user.email 'bot@localhost'", "Set git email"),
+        (f"git remote remove origin 2>/dev/null || true", "Remove old remote"),
         (f"git remote add origin {UPSTREAM_REPO}", "Add upstream repository"),
         (f"git fetch origin {UPSTREAM_BRANCH}", "Fetch latest code from upstream"),
         (f"git reset --hard origin/{UPSTREAM_BRANCH}", "Apply upstream changes"),
     ]
+    
+    # Initialize git if not already initialized
+    if not os.path.isdir(".git"):
+        logger.info("  Running: Initialize git repository with no templates")
+        return_code, output = run_cmd("git init --template='' 2>/dev/null || git init")
+        
+        if return_code != 0:
+            logger.warning(f"  ⚠️ Git init had issues: {output}")
+            # Continue anyway - might work with fetch/reset
 
     for cmd, desc in cmds:
         logger.info(f"  Running: {desc}")
