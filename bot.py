@@ -914,7 +914,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def open_home(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
-        "ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ɪɴsᴛᴀɴᴛ ᴄᴏᴠᴇʀ ʙᴏᴛ\n\n"
+        "<b>ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ɪɴsᴛᴀɴᴛ ᴄᴏᴠᴇʀ ʙᴏᴛ</b>\n\n"
         "🎬 ᴘʀᴏꜰᴇssɪᴏɴᴀʟ ᴠɪᴅᴇᴏ ᴄᴏᴠᴇʀ ᴛᴏᴏʟ\n\n"
         "ǫᴜɪᴄᴋ sᴛᴀʀᴛ:\n\n"
         "📸 ᴜᴘʟᴏᴀᴅ ᴘʜᴏᴛᴏ\n"
@@ -926,9 +926,9 @@ async def open_home(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✅ ʜɪɢʜ-ǫᴜᴀʟɪᴛʏ ᴄᴏᴠᴇʀs\n"
         "✅ ᴀᴜᴛᴏᴍᴀᴛɪᴄ ᴍᴀɴᴀɢᴇᴍᴇɴᴛ\n\n"
         "ᴄᴏᴍᴍᴀɴᴅs:\n"
-        "/ʜᴇʟᴘ – ᴄᴏᴍᴘʟᴇᴛᴇ ɢᴜɪᴅᴇ\n"
-        "/sᴇᴛᴛɪɴɢs – ᴍᴀɴᴀɢᴇ ᴄᴏɴᴛᴇɴᴛ\n"
-        "/ᴀʙᴏᴜᴛ – ᴍᴏʀᴇ ɪɴꜰᴏʀᴍᴀᴛɪᴏɴ"
+        "/help – ᴄᴏᴍᴘʟᴇᴛᴇ ɢᴜɪᴅᴇ\n"
+        "/settings – ᴍᴀɴᴀɢᴇ ᴄᴏɴᴛᴇɴᴛ\n"
+        "/about – ᴍᴏʀᴇ ɪɴꜰᴏʀᴍᴀᴛɪᴏɴ"
     )
 
     kb = InlineKeyboardMarkup([
@@ -1028,7 +1028,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     text = (
-        "ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ɪɴsᴛᴀɴᴛ ᴄᴏᴠᴇʀ ʙᴏᴛ\n\n"
+        "<b>ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ɪɴsᴛᴀɴᴛ ᴄᴏᴠᴇʀ ʙᴏᴛ</b>\n\n"
         "🎬 ᴘʀᴏꜰᴇssɪᴏɴᴀʟ ᴠɪᴅᴇᴏ ᴄᴏᴠᴇʀ ᴛᴏᴏʟ\n\n"
         "ǫᴜɪᴄᴋ sᴛᴀʀᴛ:\n\n"
         "📸 ᴜᴘʟᴏᴀᴅ ᴘʜᴏᴛᴏ\n"
@@ -1040,9 +1040,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✅ ʜɪɢʜ-ǫᴜᴀʟɪᴛʏ ᴄᴏᴠᴇʀs\n"
         "✅ ᴀᴜᴛᴏᴍᴀᴛɪᴄ ᴍᴀɴᴀɢᴇᴍᴇɴᴛ\n\n"
         "ᴄᴏᴍᴍᴀɴᴅs:\n"
-        "/ʜᴇʟᴘ – ᴄᴏᴍᴘʟᴇᴛᴇ ɢᴜɪᴅᴇ\n"
-        "/sᴇᴛᴛɪɴɢs – ᴍᴀɴᴀɢᴇ ᴄᴏɴᴛᴇɴᴛ\n"
-        "/ᴀʙᴏᴜᴛ – ᴍᴏʀᴇ ɪɴꜰᴏʀᴍᴀᴛɪᴏɴ"
+        "/help – ᴄᴏᴍᴘʟᴇᴛᴇ ɢᴜɪᴅᴇ\n"
+        "/settings – ᴍᴀɴᴀɢᴇ ᴄᴏɴᴛᴇɴᴛ\n"
+        "/about – ᴍᴏʀᴇ ɪɴꜰᴏʀᴍᴀᴛɪᴏɴ"
     )
 
     # Build home menu with all buttons
@@ -1111,7 +1111,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✓ ʜɪɢʜ-qᴜᴀʟɪᴛʏ ᴘʜᴏᴛᴏs ᴡᴏʀᴋ ʙᴇsᴛ\n"
         "✓ ᴜᴘᴅᴀᴛᴇ ᴛʜᴜᴍʙɴᴀɪʟ ᴀɴʏᴛɪᴍᴇ\n"
         "✓ ʀᴇᴍᴏᴠᴇ ᴏʟᴅ ᴄᴏᴠᴇʀs ꜰʀᴏᴍ sᴇᴛᴛɪɴɢs\n\n"
-        "📞 ɴᴇᴇᴅ ʜᴇʟᴘ? ᴄᴏɴᴛᴀᴄᴛ: /ᴀʙᴏᴜᴛ"
+        "📞 ɴᴇᴇᴅ ʜᴇʟᴘ? ᴄᴏɴᴛᴀᴄᴛ: /about"
     )
     banner = HOME_MENU_BANNER_URL
     if banner:
@@ -1140,11 +1140,9 @@ async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "✅ ɪɴsᴛᴀɴᴛ ʀᴇsᴜʟᴛs\n\n"
         "<b>ᴛᴇᴄʜɴᴏʟᴏɢʏ sᴛᴀᴄᴋ:</b>\n"
         "⚙️ ᴀᴅᴠᴀɴᴄᴇᴅ ᴘʏᴛʜᴏɴ ᴀᴘɪ\n"
-        "🎬 ꜰꜰᴍᴘᴇɢ ᴠɪᴅᴇᴏ ᴘʀᴏᴄᴇssɪɴɢ\n"
-        "🤖 ᴛᴇʟᴇɢʀᴀᴍ ʙᴏᴛ ꜰʀᴀᴍᴇᴡᴏʀᴋ\n\n"
         "<b>sᴜᴘᴘᴏʀᴛ & ᴄᴏɴᴛᴀᴄᴛ:</b>\n"
         f"👨‍💻 ᴅᴇᴠᴇʟᴏᴘᴇʀ: @{OWNER_USERNAME or 'sᴜᴘᴘᴏʀᴛ'}\n"
-        "📧 ꜰᴏʀ ʜᴇʟᴘ: /ᴀʙᴏᴜᴛ → ᴅᴇᴠᴇʟᴏᴘᴇʀ\n\n"
+        "📧 ꜰᴏʀ ʜᴇʟᴘ: /about → ᴅᴇᴠᴇʟᴏᴘᴇʀ\n\n"
         "ᴛʜᴀɴᴋ ʏᴏᴜ ꜰᴏʀ ᴜsɪɴɢ ᴛʜɪs ʙᴏᴛ! 🎬"
     )
     banner = HOME_MENU_BANNER_URL
