@@ -705,9 +705,9 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "   • sᴇɴᴅ ᴀ ᴠɪᴅᴇᴏ ꜰɪʟᴇ\n"
                     "   • ᴛʜᴜᴍʙɴᴀɪʟ ᴀᴘᴘʟɪᴇᴅ ɪɴsᴛᴀɴᴛʟʏ\n\n"
                     "<b>ᴀᴅᴅɪᴛɪᴏɴᴀʟ ᴄᴏᴍᴍᴀɴᴅs:</b>\n"
-                    "/ʀᴇᴍᴏᴠᴇ – ᴅᴇʟᴇᴛᴇ sᴀᴠᴇᴅ ᴛʜᴜᴍʙɴᴀɪʟ\n"
-                    "/sᴇᴛᴛɪɴɢs – ᴠɪᴇᴡ & ᴍᴀɴᴀɢᴇ sᴇᴛᴛɪɴɢs\n"
-                    "/ᴀʙᴏᴜᴛ – ɪɴꜰᴏʀᴍᴀᴛɪᴏɴ ᴀʙᴏᴜᴛ ʙᴏᴛ"
+                    "/remove – ᴅᴇʟᴇᴛᴇ sᴀᴠᴇᴅ ᴛʜᴜᴍʙɴᴀɪʟ\n"
+                    "/settings – ᴠɪᴇᴡ & ᴍᴀɴᴀɢᴇ sᴇᴛᴛɪɴɢs\n"
+                    "/about – ɪɴꜰᴏʀᴍᴀᴛɪᴏɴ ᴀʙᴏᴜᴛ ʙᴏᴛ"
                 )
             elif key == "about":
                 text = (
