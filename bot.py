@@ -1343,9 +1343,9 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
     if user_id != OWNER_ID:
-        return await update.message.reply_text("❌ You Are Not Authorized.")
+        return await update.message.reply_text("❌ You are not authorized.")
 
-    msg = await update.message.reply_text("🔄 Checking For Updates From Upstream...")
+    msg = await update.message.reply_text("🔄 Checking for updates from upstream...")
 
     try:
         success = update_from_upstream()
@@ -1353,26 +1353,26 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not success:
             await msg.edit_text(
                 "❌ <b>Update Failed</b>\n\n"
-                "Could Not Fetch Updates From Upstream.\n"
-                "Please Check:\n"
-                "• UPSTREAM_REPO Is Correct\n"
-                "• UPSTREAM_BRANCH Is Correct\n"
-                "• Internet Connection Is Active\n\n"
-                "Check Logs For Details.",
+                "Could not fetch updates from upstream.\n"
+                "Please check:\n"
+                "• UPSTREAM_REPO is correct\n"
+                "• UPSTREAM_BRANCH is correct\n"
+                "• Internet connection is active\n\n"
+                "Check logs for details.",
                 parse_mode="HTML"
             )
-            logger.error(f"Update Failed - Bot Not Restarting")
+            logger.error(f"Update failed - bot not restarting")
             return
 
         # Update successful - now restart
         await msg.edit_text(
             "✅ <b>Update Successful!</b>\n\n"
-            "🔄 Restarting Bot With New Changes...\n"
-            "<i>Please Wait...</i>",
+            "🔄 Restarting bot with new changes...\n"
+            "<i>Please wait...</i>",
             parse_mode="HTML"
         )
         
-        logger.info("✅ Update Completed Successfully. Restarting Bot...")
+        logger.info("✅ Update completed successfully. Restarting bot...")
         # Give time for message to be sent
         await asyncio.sleep(1)
         
@@ -1380,14 +1380,15 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.execv(sys.executable, [sys.executable] + sys.argv)
         
     except Exception as e:
-        logger.error(f"❌ Error During Restart/Update: {e}")
+        logger.error(f"❌ Error during restart/update: {e}")
         await msg.edit_text(
             f"❌ <b>Error During Update</b>\n\n"
-            f"An Unexpected Error Occurred:\n"
+            f"An unexpected error occurred:\n"
             f"<code>{str(e)[:100]}</code>\n\n"
-            f"Check Logs For Full Details.",
+            f"Check logs for full details.",
             parse_mode="HTML"
         )
+
 
 
 """═══════════════════ ADMIN COMMANDS ═══════════════════"""
