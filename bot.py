@@ -438,8 +438,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.info(f"📊 Member status: {member.status}")
             except Exception as member_error:
                 logger.error(f"❌ Error checking membership: {member_error}")
-await query.answer("❌ ᴄʜᴀɴɴᴇʟ ᴄʜᴇᴄᴋ ꜰᴀɪʟᴇᴅ! ᴛʀʏ ᴀɢᴀɪɴ ʟᴀᴛᴇʀ.", show_alert=True)
-            return
+                await query.answer("❌ ᴄʜᴀɴɴᴇʟ ᴄʜᴇᴄᴋ ꜰᴀɪʟᴇᴅ! ᴛʀʏ ᴀɢᴀɪɴ ʟᴀᴛᴇʀ.", show_alert=True)
+                return
             
             # Check if user is member
             if member.status in (
