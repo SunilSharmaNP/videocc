@@ -1,6 +1,7 @@
 import os
 import logging
 import random
+import asyncio
 from telegram import Update, MessageEntity, InputFile
 from telegram.ext import (
     Application,
@@ -42,7 +43,14 @@ if not TOKEN:
     logger.error("BOT_TOKEN not set in config or environment (config.env).")
     raise SystemExit("BOT_TOKEN not set")
 
-OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
+try:
+    OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
+    if OWNER_ID == 0:
+        logger.error("OWNER_ID not set in config or environment (config.env).")
+        raise SystemExit("OWNER_ID not set. Add OWNER_ID=<your_numeric_user_id> to config.env")
+except ValueError as e:
+    logger.error(f"OWNER_ID must be a numeric user ID, not a username or string. Got: {os.environ.get('OWNER_ID')}")
+    raise SystemExit(f"Invalid OWNER_ID: {os.environ.get('OWNER_ID')}. Must be numeric (e.g., 8347137417)")
 FORCE_SUB_CHANNEL_ID = os.environ.get("FORCE_SUB_CHANNEL_ID")
 FORCE_SUB_BANNER_URL = os.environ.get("FORCE_SUB_BANNER_URL")
 HOME_MENU_BANNER_URL = os.environ.get("HOME_MENU_BANNER_URL")
