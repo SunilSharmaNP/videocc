@@ -204,7 +204,7 @@ async def check_admin(update: Update) -> bool:
     """Check if user is admin and send error if not"""
     user_id = update.effective_user.id
     if not is_admin(user_id):
-        await update.message.reply_text("❌ You are not authorized to use this command.")
+        await update.message.reply_text("❌ You Are Not Authorized To Use This Command.")
         return False
     return True
 
@@ -876,7 +876,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.error(f"Error sending thumbnail: {e}")
         else:
-            text = "❌ <b>No Thumbnail Saved Yet</b>\n\nYou haven't uploaded a thumbnail. Send a photo to the bot to create one now!"
+            text = "❌ <b>No Thumbnail Saved Yet</b>\n\nYou Haven't Uploaded A Thumbnail. Send A Photo To The Bot To Create One Now!"
             back_kb = InlineKeyboardMarkup([
                 [InlineKeyboardButton("⬅️ Back", callback_data="submenu_thumbnails")]
             ])
@@ -895,7 +895,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if delete_thumbnail(user_id):
             text = "✅ <b>Thumbnail Deleted Successfully</b>\n\nYour saved thumbnail has been removed from the system. You can upload a new one anytime!"
         else:
-            text = "⚠️ <b>No Thumbnail Found</b>\n\nYou don't have a saved thumbnail yet. Send a photo to create one!"
+            text = "⚠️ <b>No Thumbnail Found</b>\n\nYou Don't Have A Saved Thumbnail Yet. Send A Photo To Create One!"
         back_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("⬅️ Back", callback_data="submenu_thumbnails")]
         ])
@@ -1015,7 +1015,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Check if user is banned
     if is_user_banned(user_id):
-        await update.message.reply_text("🚫 <b>Access Denied</b>\n\nYour account has been restricted from using this bot. Please contact support if you believe this is an error.", parse_mode="HTML")
+        await update.message.reply_text("🚫 <b>Access Denied</b>\n\nYour Account Has Been Restricted From Using This Bot. Please Contact Support If You Believe This Is An Error.", parse_mode="HTML")
         return
     
     # Log new user (if first time)
@@ -1192,8 +1192,8 @@ async def remover(update: Update, context: ContextTypes.DEFAULT_TYPE):
         log_msg = format_log_message(user_id, username, log_data["action"])
         await send_log(context, log_msg)
         
-        return await update.message.reply_text("✅ <b>Thumbnail Removed Successfully</b>\n\nYour thumbnail has been deleted. Upload a new one anytime!", reply_to_message_id=update.message.message_id, parse_mode="HTML")
-    await update.message.reply_text("⚠️ <b>No Thumbnail to Remove</b>\n\nYou haven't saved a thumbnail yet. Send a photo first!", reply_to_message_id=update.message.message_id, parse_mode="HTML")
+        return await update.message.reply_text("✅ <b>Thumbnail Removed Successfully</b>\n\nYour Thumbnail Has Been Deleted. Upload A New One Anytime!", reply_to_message_id=update.message.message_id, parse_mode="HTML")
+    await update.message.reply_text("⚠️ <b>No Thumbnail To Remove</b>\n\nYou Haven't Saved A Thumbnail Yet. Send A Photo First!", reply_to_message_id=update.message.message_id, parse_mode="HTML")
 
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
@@ -1215,7 +1215,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_log(context, log_msg)
     
     action_text = "Updated" if is_replace else "Saved"
-    await update.message.reply_text(f"✅ <b>Thumbnail {action_text} Successfully!</b>\n\nYour new thumbnail is ready. Send any video and the cover will be applied automatically! 🎬", reply_to_message_id=update.message.message_id, parse_mode="HTML")
+    await update.message.reply_text(f"✅ <b>Thumbnail {action_text} Successfully!</b>\n\nYour New Thumbnail Is Ready. Send Any Video And The Cover Will Be Applied Automatically! 🎬", reply_to_message_id=update.message.message_id, parse_mode="HTML")
 
 async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
@@ -1224,8 +1224,8 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.message.from_user.username or "No Username"
     cover = get_thumbnail(user_id)
     if not cover:
-        return await update.message.reply_text("❌ <b>No Thumbnail Found</b>\n\nPlease save a thumbnail first by sending a photo!\n\nUse /settings to manage your thumbnails.", reply_to_message_id=update.message.message_id, parse_mode="HTML")
-    msg = await update.message.reply_text("⏳ <b>Processing Video...</b>\n\nApplying your thumbnail cover... This may take a few seconds. Please wait! 🎬", reply_to_message_id=update.message.message_id, parse_mode="HTML")
+        return await update.message.reply_text("❌ <b>No Thumbnail Found</b>\n\nPlease Save A Thumbnail First By Sending A Photo!\n\nUse /Settings To Manage Your Thumbnails.", reply_to_message_id=update.message.message_id, parse_mode="HTML")
+    msg = await update.message.reply_text("⏳ <b>Processing Video...</b>\n\nApplying Your Thumbnail Cover... This May Take A Few Seconds. Please Wait! 🎬", reply_to_message_id=update.message.message_id, parse_mode="HTML")
     
     video = update.message.video.file_id
     
@@ -1262,16 +1262,16 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.error(f"❌ Error forwarding video to log channel: {e}")
     except Exception as e:
-        await update.message.reply_text(f"❌ <b>Processing Failed</b>\n\nError: {str(e)[:100]}\n\nPlease try again or contact support.", parse_mode="HTML")
+        await update.message.reply_text(f"❌ <b>Processing Failed</b>\n\nError: {str(e)[:100]}\n\nPlease Try Again Or Contact Support.", parse_mode="HTML")
 
 
 async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
     if user_id != OWNER_ID:
-        return await update.message.reply_text("❌ You are not authorized.")
+        return await update.message.reply_text("❌ You Are Not Authorized.")
 
-    msg = await update.message.reply_text("🔄 Checking for updates from upstream...")
+    msg = await update.message.reply_text("🔄 Checking For Updates From Upstream...")
 
     try:
         success = update_from_upstream()
@@ -1279,26 +1279,26 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not success:
             await msg.edit_text(
                 "❌ <b>Update Failed</b>\n\n"
-                "Could not fetch updates from upstream.\n"
-                "Please check:\n"
-                "• UPSTREAM_REPO is correct\n"
-                "• UPSTREAM_BRANCH is correct\n"
-                "• Internet connection is active\n\n"
-                "Check logs for details.",
+                "Could Not Fetch Updates From Upstream.\n"
+                "Please Check:\n"
+                "• UPSTREAM_REPO Is Correct\n"
+                "• UPSTREAM_BRANCH Is Correct\n"
+                "• Internet Connection Is Active\n\n"
+                "Check Logs For Details.",
                 parse_mode="HTML"
             )
-            logger.error(f"Update failed - bot not restarting")
+            logger.error(f"Update Failed - Bot Not Restarting")
             return
 
         # Update successful - now restart
         await msg.edit_text(
             "✅ <b>Update Successful!</b>\n\n"
-            "🔄 Restarting bot with new changes...\n"
-            "<i>Please wait...</i>",
+            "🔄 Restarting Bot With New Changes...\n"
+            "<i>Please Wait...</i>",
             parse_mode="HTML"
         )
         
-        logger.info("✅ Update completed successfully. Restarting bot...")
+        logger.info("✅ Update Completed Successfully. Restarting Bot...")
         # Give time for message to be sent
         await asyncio.sleep(1)
         
@@ -1306,12 +1306,12 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.execv(sys.executable, [sys.executable] + sys.argv)
         
     except Exception as e:
-        logger.error(f"❌ Error during restart/update: {e}")
+        logger.error(f"❌ Error During Restart/Update: {e}")
         await msg.edit_text(
             f"❌ <b>Error During Update</b>\n\n"
-            f"An unexpected error occurred:\n"
+            f"An Unexpected Error Occurred:\n"
             f"<code>{str(e)[:100]}</code>\n\n"
-            f"Check logs for full details.",
+            f"Check Logs For Full Details.",
             parse_mode="HTML"
         )
 
@@ -1326,12 +1326,12 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "🛡️ " + fancy_text("Admin Control Panel") + "\n\n"
         "👑 <b>Welcome Admin!</b>\n\n"
-        "You have full access to all bot management tools:\n\n"
-        "📊 View detailed statistics\n"
-        "⏱️ Monitor bot performance\n"
-        "🚫 Ban/Unban users\n"
-        "📢 Send announcements to all users\n\n"
-        "Choose an option below:"
+        "You Have Full Access To All Bot Management Tools:\n\n"
+        "📊 View Detailed Statistics\n"
+        "⏱️ Monitor Bot Performance\n"
+        "🚫 Ban/Unban Users\n"
+        "📢 Send Announcements To All Users\n\n"
+        "Choose An Option Below:"
     )
     admin_kb = InlineKeyboardMarkup([
         [InlineKeyboardButton("📊 Statistics", callback_data="admin_stats"),
@@ -1377,8 +1377,8 @@ async def ban_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = update.message.text.split(None, 2)
     if len(args) < 2:
         return await update.message.reply_text(
-            "❌ Usage: /ban <user_id> [reason]\n"
-            "Example: /ban 123456789 Spam"
+            "❌ Usage: /Ban <User_Id> [Reason]\n"
+            "Example: /Ban 123456789 Spam"
         )
     
     try:
@@ -1397,9 +1397,9 @@ async def ban_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             log_msg = format_log_message(user_id, "User", log_data["action"], log_data.get("details", ""))
             await send_log(context, log_msg)
         else:
-            await update.message.reply_text("❌ Failed to ban user")
+            await update.message.reply_text("❌ Failed To Ban User")
     except ValueError:
-        await update.message.reply_text("❌ Invalid user ID")
+        await update.message.reply_text("❌ Invalid User ID")
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {e}")
 
@@ -1412,8 +1412,8 @@ async def unban_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = update.message.text.split()
     if len(args) < 2:
         return await update.message.reply_text(
-            "❌ Usage: /unban <user_id>\n"
-            "Example: /unban 123456789"
+            "❌ Usage: /Unban <User_Id>\n"
+            "Example: /Unban 123456789"
         )
     
     try:
@@ -1426,9 +1426,9 @@ async def unban_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             log_msg = format_log_message(user_id, "User", log_data["action"])
             await send_log(context, log_msg)
         else:
-            await update.message.reply_text("❌ Failed to unban user")
+            await update.message.reply_text("❌ Failed To Unban User")
     except ValueError:
-        await update.message.reply_text("❌ Invalid user ID")
+        await update.message.reply_text("❌ Invalid User ID")
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {e}")
 
@@ -1496,12 +1496,12 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = update.message.text.split(None, 1)
     if len(args) < 2:
         return await update.message.reply_text(
-            "❌ <b>Usage:</b> /broadcast <message>\n\n"
-            "<b>Example:</b> /broadcast Hello everyone! Check out new features!\n\n"
+            "❌ <b>Usage:</b> /Broadcast <Message>\n\n"
+            "<b>Example:</b> /Broadcast Hello Everyone! Check Out New Features!\n\n"
             "💡 <b>Tips:</b>\n"
-            "• Message will be sent to all active users\n"
-            "• HTML formatting is supported\n"
-            "• Emojis work great too! 🎉",
+            "• Message Will Be Sent To All Active Users\n"
+            "• HTML Formatting Is Supported\n"
+            "• Emojis Work Great Too! 🎉",
             parse_mode="HTML"
         )
     
@@ -1510,11 +1510,11 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Show confirmation
     confirm_text = (
         "📢 <b>Broadcast Confirmation</b>\n\n"
-        f"<b>Message to send:</b>\n"
+        f"<b>Message To Send:</b>\n"
         f"{message_text}\n\n"
         f"👥 Total Users: <b>{get_total_users()}</b>\n\n"
-        "⚠️ This action cannot be undone!\n"
-        "Proceeding... Messages will be sent now."
+        "⚠️ This Action Cannot Be Undone!\n"
+        "Proceeding... Messages Will Be Sent Now."
     )
     msg = await update.message.reply_text(confirm_text, parse_mode="HTML")
     
@@ -1529,7 +1529,7 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not user_ids:
             await msg.edit_text(
                 "❌ <b>No Users Found</b>\n\n"
-                "There are no users in the database to broadcast to.",
+                "There Are No Users In The Database To Broadcast To.",
                 parse_mode="HTML"
             )
             return
@@ -1542,12 +1542,12 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 await context.bot.send_message(
                     chat_id=user_id,
-                    text=f"📢 <b>Announcement from Admin</b>\n\n{message_text}",
+                    text=f"📢 <b>Announcement From Admin</b>\n\n{message_text}",
                     parse_mode="HTML"
                 )
                 sent += 1
             except Exception as e:
-                logger.warning(f"Could not send broadcast to user {user_id}: {e}")
+                logger.warning(f"Could Not Send Broadcast To User {user_id}: {e}")
                 failed += 1
         
         # Show final status
@@ -1576,10 +1576,10 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.edit_text(
             f"❌ <b>Broadcast Failed</b>\n\n"
             f"Error: {str(e)[:100]}\n\n"
-            "Check logs for details.",
+            "Check Logs For Details.",
             parse_mode="HTML"
         )
-        logger.error(f"Broadcast error: {e}", exc_info=True)
+        logger.error(f"Broadcast Error: {e}", exc_info=True)
 
 
 
@@ -1599,28 +1599,28 @@ def main() -> None:
 
     # Global error handler
     async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Log all errors"""
+        """Log All Errors"""
         logger.error(f"🔴 ERROR: {context.error}", exc_info=context.error)
 
     app.add_error_handler(error_handler)
     
     # Setup bot commands on startup
     async def setup_commands(app: Application) -> None:
-        """Setup bot commands menu"""
+        """Setup Bot Commands Menu"""
         from telegram import BotCommand
         
         commands = [
-            BotCommand("start", "🏠 Start bot"),
-            BotCommand("help", "ℹ️ How to use bot"),
-            BotCommand("about", "🤖 About bot"),
-            BotCommand("settings", "⚙️ Bot settings"),
-            BotCommand("remove", "🗑️ Remove thumbnail"),
-            BotCommand("admin", "🛡️ Admin panel"),
-            BotCommand("ban", "🚫 Ban user"),
-            BotCommand("unban", "✅ Unban user"),
-            BotCommand("stats", "📊 Bot statistics"),
-            BotCommand("status", "⏱️ Bot status"),
-            BotCommand("broadcast", "📢 Broadcast message"),
+            BotCommand("start", "🏠 Start Bot"),
+            BotCommand("help", "ℹ️ How To Use Bot"),
+            BotCommand("about", "🤖 About Bot"),
+            BotCommand("settings", "⚙️ Bot Settings"),
+            BotCommand("remove", "🗑️ Remove Thumbnail"),
+            BotCommand("admin", "🛡️ Admin Panel"),
+            BotCommand("ban", "🚫 Ban User"),
+            BotCommand("unban", "✅ Unban User"),
+            BotCommand("stats", "📊 Bot Statistics"),
+            BotCommand("status", "⏱️ Bot Status"),
+            BotCommand("broadcast", "📢 Broadcast Message"),
         ]
         
         try:
@@ -1632,7 +1632,7 @@ def main() -> None:
     # Register post_init callback to setup commands
     app.post_init = setup_commands
 
-    # Command handlers (MUST be registered FIRST before text handler)
+    # Command Handlers (MUST Be Registered FIRST Before Text Handler)
     app.add_handler(CommandHandler("start", start, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("help", help_cmd, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("about", about, filters=filters.ChatType.PRIVATE))
@@ -1648,19 +1648,19 @@ def main() -> None:
     app.add_handler(CommandHandler("status", status_cmd, filters=filters.ChatType.PRIVATE))
     app.add_handler(CommandHandler("broadcast", broadcast_cmd, filters=filters.ChatType.PRIVATE))
 
-    # Photo and video handlers (private chats only via filters)
+    # Photo And Video Handlers (Private Chats Only Via Filters)
     app.add_handler(MessageHandler(filters.PHOTO & filters.ChatType.PRIVATE, photo_handler))
     app.add_handler(MessageHandler(filters.VIDEO & filters.ChatType.PRIVATE, video_handler))
     
-    # Text handler for dump channel ID capture (MUST be LAST - only non-command text)
-    # Add filter to exclude commands (messages starting with /)
+    # Text Handler For Dump Channel ID Capture (MUST Be LAST - Only Non-Command Text)
+    # Add Filter To Exclude Commands (Messages Starting With /)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, text_handler))
     
-    # Register callback handler (handles all callbacks)
+    # Register Callback Handler (Handles All Callbacks)
     app.add_handler(CallbackQueryHandler(callback_handler))
 
-    logger.info("✅ All handlers registered")
-    logger.info("Bot starting (polling)")
+    logger.info("✅ All Handlers Registered")
+    logger.info("Bot Starting (Polling)")
     app.run_polling(
         allowed_updates=[
             "message",
