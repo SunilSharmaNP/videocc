@@ -165,29 +165,7 @@ async def get_invite_link(bot, chat_id):
 
 """--------------------ADMIN CHECK-----------------"""
 
-def fancy_text(text: str) -> str:
-    """Convert text to cool fancy font style (Small caps)
-    
-    Example: 
-        "Hello" -> "ʜᴇʟʟᴏ"
-        "Instant Cover Bot" -> "ɪɴsᴛᴀɴᴛ ᴄᴏᴠᴇʀ ʙᴏᴛ"
-    """
-    # Unicode mapping for small caps fancy style
-    # Uppercase: A-Z converted to small caps
-    uppercase = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘqʀsᴛᴜᴠᴡxʏᴢ"
-    # Lowercase: a-z (uses same mapping for consistency)
-    lowercase = "ᴀʙᴄᴅᴇꜰɢʜɪᴊᴋʟᴍɴᴏᴘqʀsᴛᴜᴠᴡxʏᴢ"
-    
-    result = ""
-    for char in text:
-        if 'A' <= char <= 'Z':
-            result += uppercase[ord(char) - ord('A')]
-        elif 'a' <= char <= 'z':
-            result += lowercase[ord(char) - ord('a')]
-        else:
-            result += char
-    
-    return result
+# Fancy text function removed - all text is now pre-converted to fancy font style
 
 def is_admin(user_id: int) -> bool:
     """Check if user is bot owner or admin"""
@@ -200,7 +178,7 @@ async def check_admin(update: Update) -> bool:
     """Check if user is admin and send error if not"""
     user_id = update.effective_user.id
     if not is_admin(user_id):
-        await update.message.reply_text("❌ You are not authorized to use this command.")
+        await update.message.reply_text("❌ ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴀᴜᴛʜᴏʀɪᴢᴇᴅ")
         return False
     return True
 
@@ -325,20 +303,20 @@ async def check_force_sub(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         # Build keyboard
         kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📢 Join Channel", url=invite_link)],
+            [InlineKeyboardButton("📢 ᴊᴏɪɴ ᴄʜᴀɴɴᴇʟ", url=invite_link)],
             [
-                InlineKeyboardButton("✅ Verify", callback_data="check_fsub"),
-                InlineKeyboardButton("✖️ Close", callback_data="close_banner")
+                InlineKeyboardButton("✅ ᴠᴇʀɪꜰʏ", callback_data="check_fsub"),
+                InlineKeyboardButton("✖️ ᴄʟᴏsᴇ", callback_data="close_banner")
             ]
         ])
         
         # Build prompt message
         prompt = (
-            "🔒 <b>Channel Verification Required</b>\n\n"
-            f"To access all features of this bot, you must join our community channel:\n\n"
+            "🔒 ᴄʜᴀɴɴᴇʟ ᴠᴇʀɪꜰɪᴄᴀᴛɪᴏɴ ʀᴇqᴜɪʀᴇᴅ\n\n"
+            f"→ ᴊᴏɪɴ ᴏᴜʀ ᴄᴏᴍᴍᴜɴɪᴛʏ ᴄʜᴀɴɴᴇʟ:\n\n"
             f"<b>📢 {channel_name}</b>\n\n"
-            "We share exclusive updates, tips, and announcements there.\n\n"
-            "👇 <b>Join the channel and verify to continue</b> 👇"
+            "→ ᴇxᴄʟᴜsɪᴠᴇ ᴜᴘᴅᴀᴛᴇs & ᴛɪᴘs\n\n"
+            "👇 ᴄʟɪᴄᴋ ʙᴇʟᴏᴡ ᴛᴏ ᴠᴇʀɪꜰʏ 👇"
         )
 
         try:
@@ -460,8 +438,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.info(f"📊 Member status: {member.status}")
             except Exception as member_error:
                 logger.error(f"❌ Error checking membership: {member_error}")
-                await query.answer("❌ Channel check failed! Try again later.", show_alert=True)
-                return
+await query.answer("❌ ᴄʜᴀɴɴᴇʟ ᴄʜᴇᴄᴋ ꜰᴀɪʟᴇᴅ! ᴛʀʏ ᴀɢᴀɪɴ ʟᴀᴛᴇʀ.", show_alert=True)
+            return
             
             # Check if user is member
             if member.status in (
@@ -473,7 +451,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.info(f"✅ User {user_id} verified successfully with status {member.status}")
                 
                 # Show success alert
-                await query.answer("✅ Channel verified successfully!", show_alert=False)
+                await query.answer("✅ ᴄʜᴀɴɴᴇʟ ᴠᴇʀɪꜰɪᴇᴅ sᴜᴄᴄᴇssꜰᴜʟʟʏ!", show_alert=False)
                 
                 # Try to delete verification message
                 try:
@@ -489,12 +467,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # User not in channel yet
             logger.warning(f"⚠️ User {user_id} not a member. Status: {member.status}")
-            await query.answer("❌ Join the channel first!\n\nPlease join the channel and then click Verify.", show_alert=True)
+            await query.answer("❌ ᴊᴏɪɴ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ꜰɪʀsᴛ!\n\nᴘʟᴇᴀsᴇ ᴊᴏɪɴ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ᴀɴᴅ ᴛʜᴇɴ ᴄʟɪᴄᴋ ᴠᴇʀɪꜰʏ.", show_alert=True)
             return
             
         except Exception as e:
             logger.error(f"❌ Verification error: {type(e).__name__}: {e}", exc_info=True)
-            await query.answer("❌ Verification failed!\n\nPlease make sure you joined the channel first.", show_alert=True)
+            await query.answer("❌ ᴠᴇʀɪꜰɪᴄᴀᴛɪᴏɴ ꜰᴀɪʟᴇᴅ!\n\nᴘʟᴇᴀsᴇ ᴍᴀᴋᴇ sᴜʀᴇ ʏᴏᴜ ᴊᴏɪɴᴇᴅ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ꜰɪʀsᴛ.", show_alert=True)
             return
     
     # Handle close button
@@ -520,10 +498,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer()
         stats = get_stats()
         text = (
-            "📊 <b>Bot Statistics</b>\n\n"
-            f"👥 Total Users: <b>{stats['total_users']}</b>\n"
-            f"🚫 Banned Users: <b>{stats['banned_users']}</b>\n"
-            f"🖼 Users with Thumbnail: <b>{stats['users_with_thumbnail']}</b>"
+            "📊 ʙᴏᴛ sᴛᴀᴛɪsᴛɪᴄs\n\n"
+            f"👥 ᴛᴏᴛᴀʟ ᴜsᴇʀs: {stats['total_users']}\n"
+            f"🚫 ʙᴀɴɴᴇᴅ ᴜsᴇʀs: {stats['banned_users']}\n"
+            f"🖼 ᴡɪᴛʜ ᴛʜᴜᴍʙɴᴀɪʟ: {stats['users_with_thumbnail']}"
         )
         back_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("⬅️ Back", callback_data="admin_back")]
@@ -549,11 +527,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         active_users = total_users - banned_users
         
         text = (
-            "👥 <b>User Management</b>\n\n"
-            f"📊 <b>Total Users:</b> <code>{total_users}</code>\n"
-            f"✅ <b>Active Users:</b> <code>{active_users}</code>\n"
-            f"🚫 <b>Banned Users:</b> <code>{banned_users}</code>\n\n"
-            f"📈 <b>Ban Rate:</b> <code>{(banned_users/total_users*100):.1f}%</code>"
+            "👥 ᴜsᴇʀ ᴍᴀɴᴀɢᴇᴍᴇɴᴛ\n\n"
+            f"📊 ᴛᴏᴛᴀʟ ᴜsᴇʀs: {total_users}\n"
+            f"✅ ᴀᴄᴛɪᴠᴇ ᴜsᴇʀs: {active_users}\n"
+            f"🚫 ʙᴀɴɴᴇᴅ ᴜsᴇʀs: {banned_users}\n\n"
+            f"📈 ʙᴀɴ ʀᴀᴛᴇ: {(banned_users/total_users*100):.1f}%"
         )
         back_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("⬅️ Back", callback_data="admin_back")]
@@ -579,11 +557,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             cpu_percent = psutil.cpu_percent(interval=1)
             ram = psutil.virtual_memory()
             text = (
-                "⏱️ <b>Bot Status</b>\n\n"
-                f"🟢 Status: <b>Online</b>\n\n"
-                f"🖥 <b>System Resources:</b>\n"
-                f"CPU: <b>{cpu_percent}%</b>\n"
-                f"RAM: <b>{ram.percent}%</b>"
+                "⏱️ ʙᴏᴛ sᴛᴀᴛᴜs\n\n"
+                f"🟢 sᴛᴀᴛᴜs: ᴏɴʟɪɴᴇ\n\n"
+                f"🖥 sʏsᴛᴇᴍ ʀᴇsᴏᴜʀᴄᴇs:\n"
+                f"ᴄᴘᴜ: {cpu_percent}%\n"
+                f"ʀᴀᴍ: {ram.percent}%"
             )
         except ImportError:
             text = "⏱️ <b>Bot Status</b>\n\n🟢 Status: <b>Online</b>"
@@ -606,7 +584,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("❌ Unauthorized", show_alert=True)
             return
         await query.answer()
-        text = "🚫 <b>Ban User</b>\n\nSend user ID to ban (or /ban userid reason)"
+        text = "🚫 ʙᴀɴ ᴜsᴇʀ\n\nꜱᴇɴᴅ ᴜsᴇʀ ɪᴅ ᴛᴏ ʙᴀɴ ᴏʀ /ʙᴀɴ ᴜsᴇʀɪᴅ ʀᴇᴀsᴏɴ"
         back_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("⬅️ Back", callback_data="admin_back")]
         ])
@@ -618,7 +596,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("❌ Unauthorized", show_alert=True)
             return
         await query.answer()
-        text = "✅ <b>Unban User</b>\n\nSend user ID to unban (or /unban userid)"
+        text = "✅ ᴜɴʙᴀɴ ᴜsᴇʀ\n\nꜱᴇɴᴅ ᴜsᴇʀ ɪᴅ ᴛᴏ ᴜɴʙᴀɴ ᴏʀ /ᴜɴʙᴀɴ ᴜsᴇʀɪᴅ"
         back_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("⬅️ Back", callback_data="admin_back")]
         ])
@@ -630,7 +608,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("❌ Unauthorized", show_alert=True)
             return
         await query.answer()
-        text = "📢 <b>Broadcast Message</b>\n\nSend message to broadcast to all users"
+        text = "📢 ʙʀᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇ\n\nꜱᴇɴᴅ ᴍᴇssᴀɢᴇ ᴛᴏ ʙʀᴏᴀᴅᴄᴀsᴛ ᴛᴏ ᴀʟʟ ᴜsᴇʀs"
         back_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("⬅️ Back", callback_data="admin_back")]
         ])
@@ -643,7 +621,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         await query.answer()
         text = (
-            "🛡️ " + fancy_text("Admin Control Panel") + "\n\n"
+            "🛡️ ᴀᴅᴍɪɴ ᴄᴏɴᴛʀᴏʟ ᴘᴀɴᴇʟ\n\n"
             "<b>Management Options:</b>\n\n"
             "📊 <b>Statistics</b> – View user analytics\n"
             "⏱️ <b>Status</b> – Bot performance\n"
@@ -651,12 +629,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "✅ <b>Unban</b> – Restore access"
         )
         admin_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📊 Statistics", callback_data="admin_stats"),
-             InlineKeyboardButton("⏱️ Status", callback_data="admin_status")],
-            [InlineKeyboardButton("🚫 Ban User", callback_data="admin_ban"),
-             InlineKeyboardButton("✅ Unban User", callback_data="admin_unban")],
-            [InlineKeyboardButton("📢 Broadcast", callback_data="admin_broadcast"),
-             InlineKeyboardButton("⬅️ Back", callback_data="menu_back")],
+            [InlineKeyboardButton("📊 sᴛᴀᴛɪsᴛɪᴄs", callback_data="admin_stats"),
+             InlineKeyboardButton("⏱️ sᴛᴀᴛᴜs", callback_data="admin_status")],
+            [InlineKeyboardButton("🚫 ʙᴀɴ ᴜsᴇʀ", callback_data="admin_ban"),
+             InlineKeyboardButton("✅ ᴜɴʙᴀɴ ᴜsᴇʀ", callback_data="admin_unban")],
+            [InlineKeyboardButton("📢 ʙʀᴏᴀᴅᴄᴀsᴛ", callback_data="admin_broadcast"),
+             InlineKeyboardButton("⬅️ ʙᴀᴄᴋ", callback_data="menu_back")],
         ])
         try:
             msg = query.message
@@ -689,7 +667,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Handle back button - return to home menu
         if key == "back":
             text = (
-                "👋 " + fancy_text("Welcome to Instant Cover Bot") + "\n\n"
+                "👋 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ɪɴsᴛᴀɴᴛ ᴄᴏᴠᴇʀ ʙᴏᴛ\n\n"
                 "<b>Quick Start Guide:</b>\n\n"
                 "📸 <b>Step 1:</b> Send a photo as thumbnail\n"
                 "🎥 <b>Step 2:</b> Send a video to apply cover\n\n"
@@ -699,10 +677,10 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "ℹ️ /about – Bot information"
             )
             kb_rows = [
-                [InlineKeyboardButton("❓ Help", callback_data="menu_help"),
-                 InlineKeyboardButton("ℹ️ About", callback_data="menu_about")],
-                [InlineKeyboardButton("⚙️ Settings", callback_data="menu_settings"),
-                 InlineKeyboardButton("👨‍💻 Developer", callback_data="menu_developer")],
+                [InlineKeyboardButton("❓ ʜᴇʟᴘ", callback_data="menu_help"),
+                 InlineKeyboardButton("ℹ️ ᴀʙᴏᴜᴛ", callback_data="menu_about")],
+                [InlineKeyboardButton("⚙️ sᴇᴛᴛɪɴɢs", callback_data="menu_settings"),
+                 InlineKeyboardButton("👨‍💻 ᴅᴇᴠᴇʟᴏᴘᴇʀ", callback_data="menu_developer")],
             ]
             kb = InlineKeyboardMarkup(kb_rows)
             try:
@@ -718,47 +696,47 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             if key == "help":
                 text = (
-                    "ℹ️ " + fancy_text("Help Menu") + "\n\n"
-                    "<b>How to Use:</b>\n\n"
-                    "<b>1️⃣ Upload Thumbnail</b>\n"
-                    "   • Send any photo\n"
-                    "   • Automatically saved to profile\n\n"
-                    "<b>2️⃣ Apply to Video</b>\n"
-                    "   • Send a video file\n"
-                    "   • Thumbnail applied instantly\n\n"
-                    "<b>Additional Commands:</b>\n"
-                    "/remove – Delete saved thumbnail\n"
-                    "/settings – View & manage settings\n"
-                    "/about – Information about bot"
+                    "ℹ️ ʜᴇʟᴘ ᴍᴇɴᴜ\n\n"
+                    "<b>ʜᴏᴡ ᴛᴏ ᴜsᴇ:</b>\n\n"
+                    "<b>1️⃣ ᴜᴘʟᴏᴀᴅ ᴛʜᴜᴍʙɴᴀɪʟ</b>\n"
+                    "   • sᴇɴᴅ ᴀɴʏ ᴘʜᴏᴛᴏ\n"
+                    "   • ᴀᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ sᴀᴠᴇᴅ ᴛᴏ ᴘʀᴏꜰɪʟᴇ\n\n"
+                    "<b>2️⃣ ᴀᴘᴘʟʏ ᴛᴏ ᴠɪᴅᴇᴏ</b>\n"
+                    "   • sᴇɴᴅ ᴀ ᴠɪᴅᴇᴏ ꜰɪʟᴇ\n"
+                    "   • ᴛʜᴜᴍʙɴᴀɪʟ ᴀᴘᴘʟɪᴇᴅ ɪɴsᴛᴀɴᴛʟʏ\n\n"
+                    "<b>ᴀᴅᴅɪᴛɪᴏɴᴀʟ ᴄᴏᴍᴍᴀɴᴅs:</b>\n"
+                    "/ʀᴇᴍᴏᴠᴇ – ᴅᴇʟᴇᴛᴇ sᴀᴠᴇᴅ ᴛʜᴜᴍʙɴᴀɪʟ\n"
+                    "/sᴇᴛᴛɪɴɢs – ᴠɪᴇᴡ & ᴍᴀɴᴀɢᴇ sᴇᴛᴛɪɴɢs\n"
+                    "/ᴀʙᴏᴜᴛ – ɪɴꜰᴏʀᴍᴀᴛɪᴏɴ ᴀʙᴏᴜᴛ ʙᴏᴛ"
                 )
             elif key == "about":
                 text = (
-                    "🤖 " + fancy_text("Instant Video Cover Bot") + "\n\n"
-                    "<b>Premium Features:</b>\n\n"
-                    "✅ <b>One-Click Thumbnail</b>\n"
-                    "   Upload once, apply to unlimited videos\n\n"
-                    "✅ <b>Instant Processing</b>\n"
-                    "   Fast cover application\n\n"
-                    "✅ <b>Secure & Private</b>\n"
-                    "   Your data stays encrypted\n\n"
-                    "<b>Technology:</b>\n"
-                    "⚙️ Advanced Python API\n"
-                    "🔐 Secure Telegram Integration"
+                    "🤖 ɪɴsᴛᴀɴᴛ ᴠɪᴅᴇᴏ ᴄᴏᴠᴇʀ ʙᴏᴛ\n\n"
+                    "<b>ᴘʀᴇᴍɪᴜᴍ ꜰᴇᴀᴛᴜʀᴇs:</b>\n\n"
+                    "✅ <b>ᴏɴᴇ-ᴄʟɪᴄᴋ ᴛʜᴜᴍʙɴᴀɪʟ</b>\n"
+                    "   ᴜᴘʟᴏᴀᴅ ᴏɴᴄᴇ, ᴀᴘᴘʟʏ ᴛᴏ ᴜɴʟɪᴍɪᴛᴇᴅ ᴠɪᴅᴇᴏs\n\n"
+                    "✅ <b>ɪɴsᴛᴀɴᴛ ᴘʀᴏᴄᴇssɪɴɢ</b>\n"
+                    "   ꜰᴀsᴛ ᴄᴏᴠᴇʀ ᴀᴘᴘʟɪᴄᴀᴛɪᴏɴ\n\n"
+                    "✅ <b>sᴇᴄᴜʀᴇ & ᴘʀɪᴠᴀᴛᴇ</b>\n"
+                    "   ʏᴏᴜʀ ᴅᴀᴛᴀ sᴛᴀʏs ᴇɴᴄʀʏᴘᴛᴇᴅ\n\n"
+                    "<b>ᴛᴇᴄʜɴᴏʟᴏɢʏ:</b>\n"
+                    "⚙️ ᴀᴅᴠᴀɴᴄᴇᴅ ᴘʏᴛʜᴏɴ ᴀᴘɪ\n"
+                    "🔐 sᴇᴄᴜʀᴇ ᴛᴇʟᴇɢʀᴀᴍ ɪɴᴛᴇɢʀᴀᴛɪᴏɴ"
                 )
             elif key == "settings":
                 uid = query.from_user.id
                 text = (
-                    "⚙️ " + fancy_text("Settings") + "\n\n"
-                    "<b>Manage Your Content:</b>\n\n"
-                    "🖼️ <b>Thumbnail Management</b>\n"
-                    "   • View current thumbnail\n"
-                    "   • Delete & upload new\n\n"
-                    "Select option to continue:"
+                    "⚙️ sᴇᴛᴛɪɴɢs\n\n"
+                    "<b>ᴍᴀɴᴀɢᴇ ʏᴏᴜʀ ᴄᴏɴᴛᴇɴᴛ:</b>\n\n"
+                    "🖼️ <b>ᴛʜᴜᴍʙɴᴀɪʟ ᴍᴀɴᴀɢᴇᴍᴇɴᴛ</b>\n"
+                    "   • ᴠɪᴇᴡ ᴄᴜʀʀᴇɴᴛ ᴛʜᴜᴍʙɴᴀɪʟ\n"
+                    "   • ᴅᴇʟᴇᴛᴇ & ᴜᴘʟᴏᴀᴅ ɴᴇᴡ\n\n"
+                    "sᴇʟᴇᴄᴛ ᴏᴘᴛɪᴏɴ ᴛᴏ ᴄᴏɴᴛɪɴᴜᴇ:"
                 )
                 # Add settings submenus buttons
                 settings_kb = InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🖼 Thumbnails", callback_data="submenu_thumbnails")],
-                    [InlineKeyboardButton("⬅️ Back", callback_data="menu_back")]
+                    [InlineKeyboardButton("🖼 ᴛʜᴜᴍʙɴᴀɪʟs", callback_data="submenu_thumbnails")],
+                    [InlineKeyboardButton("⬅️ ʙᴀᴄᴋ", callback_data="menu_back")]
                 ])
                 try:
                     msg = query.message
@@ -772,14 +750,14 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             elif key == "developer":
                 dev_contact = f"https://t.me/{OWNER_USERNAME}" if OWNER_USERNAME else f"tg://user?id={OWNER_ID}"
                 text = (
-                    "👨‍💻 <b>Developer</b>\n\n"
-                    f"Contact: {dev_contact}\n"
-                    "If you need help, reach out to the developer."
+                    "👨‍💻 <b>ᴅᴇᴠᴇʟᴏᴘᴇʀ</b>\n\n"
+                    f"ᴄᴏɴᴛᴀᴄᴛ: {dev_contact}\n"
+                    "ɪꜰ ʏᴏᴜ ɴᴇᴇᴅ ʜᴇʟᴘ, ʀᴇᴀᴄʜ ᴏᴜᴛ ᴛᴏ ᴛʜᴇ ᴅᴇᴠᴇʟᴏᴘᴇʀ."
                 )
             else:
                 text = (
-                    "ℹ️ <b>Info</b>\n\n"
-                    "No information available for this menu."
+                    "ℹ️ <b>ɪɴꜰᴏ</b>\n\n"
+                    "ɴᴏ ɪɴꜰᴏʀᴍᴀᴛɪᴏɴ ᴀᴠᴀɪʟᴀʙʟᴇ ꜰᴏʀ ᴛʜɪs ᴍᴇɴᴜ."
                 )
             
             # Add back button to all menus (except settings which has its own)
@@ -806,23 +784,23 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "submenu_thumbnails":
         await query.answer()
         uid = query.from_user.id
-        thumb_status = "✅ Saved" if has_thumbnail(uid) else "❌ Not Saved"
+        thumb_status = "✅ sᴀᴠᴇᴅ" if has_thumbnail(uid) else "❌ ɴᴏᴛ sᴀᴠᴇᴅ"
         text = (
-            "🖼️ <b>Thumbnail Manager</b>\n\n"
-            f"<b>Current Status:</b> {thumb_status}\n\n"
-            "📚 <b>Available Actions:</b>\n\n"
-            "💾 Save Thumbnail\n"
-            "Upload a new photo as your video cover\n\n"
-            "👁️ Show Thumbnail\n"
-            "Preview your currently saved thumbnail\n\n"
-            "🗑️ Delete Thumbnail\n"
-            "Remove your saved thumbnail"
+            "🖼️ <b>ᴛʜᴜᴍʙɴᴀɪʟ ᴍᴀɴᴀɢᴇʀ</b>\n\n"
+            f"<b>ᴄᴜʀʀᴇɴᴛ sᴛᴀᴛᴜs:</b> {thumb_status}\n\n"
+            "📚 <b>ᴀᴠᴀɪʟᴀʙʟᴇ ᴀᴄᴛɪᴏɴs:</b>\n\n"
+            "💾 sᴀᴠᴇ ᴛʜᴜᴍʙɴᴀɪʟ\n"
+            "ᴜᴘʟᴏᴀᴅ ᴀ ɴᴇᴡ ᴘʜᴏᴛᴏ ᴀs ʏᴏᴜʀ ᴠɪᴅᴇᴏ ᴄᴏᴠᴇʀ\n\n"
+            "👁️ sʜᴏᴡ ᴛʜᴜᴍʙɴᴀɪʟ\n"
+            "ᴘʀᴇᴠɪᴇᴡ ʏᴏᴜʀ ᴄᴜʀʀᴇɴᴛʟʏ sᴀᴠᴇᴅ ᴛʜᴜᴍʙɴᴀɪʟ\n\n"
+            "🗑️ ᴅᴇʟᴇᴛᴇ ᴛʜᴜᴍʙɴᴀɪʟ\n"
+            "ʀᴇᴍᴏᴠᴇ ʏᴏᴜʀ sᴀᴠᴇᴅ ᴛʜᴜᴍʙɴᴀɪʟ"
         )
         thumb_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("💾 Save Thumbnail", callback_data="thumb_save_info"),
-             InlineKeyboardButton("👁️ Show Thumbnail", callback_data="thumb_show")],
-            [InlineKeyboardButton("🗑️ Delete Thumbnail", callback_data="thumb_delete"),
-             InlineKeyboardButton("⬅️ Back", callback_data="menu_settings")]
+            [InlineKeyboardButton("💾 sᴀᴠᴇ ᴛʜᴜᴍʙɴᴀɪʟ", callback_data="thumb_save_info"),
+             InlineKeyboardButton("👁️ sʜᴏᴡ ᴛʜᴜᴍʙɴᴀɪʟ", callback_data="thumb_show")],
+            [InlineKeyboardButton("🗑️ ᴅᴇʟᴇᴛᴇ ᴛʜᴜᴍʙɴᴀɪʟ", callback_data="thumb_delete"),
+             InlineKeyboardButton("⬅️ ʙᴀᴄᴋ", callback_data="menu_settings")]
         ])
         try:
             msg = query.message
@@ -839,21 +817,22 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "thumb_save_info":
         await query.answer()
         text = (
-            "💾 <b>Save Your Thumbnail</b>\n\n"
-            "<b>📸 How It Works:</b>\n\n"
-            "Step 1️⃣: Send a Photo\n"
-            "Go back and send any photo to the bot\n"
-            "This will be your video cover\n\n"
-            "Step 2️⃣: Automatic Save\n"
-            "The thumbnail is saved automatically\n"
-            "One per user - replace anytime\n\n"
-            "Step 3️⃣: Ready to Use\n"
-            "Send any video and the cover applies instantly!\n\n"
-            "💡 <b>Tips:</b>\n"
-            "• Use high-resolution images\n"
-            "• Square format (1:1) works best\n"
-            "• Max 5MB file size\n\n"
-            "Ready? Send your photo now! 📸"
+            "💾 sᴀᴠᴇ ʏᴏᴜʀ ᴛʜᴜᴍʙɴᴀɪʟ\n\n"
+            "📸 ʜᴏᴡ ɪᴛ ᴡᴏʀᴋs:\n\n"
+            "<b>sᴛᴇᴘ 1️⃣:</b> sᴇɴᴅ ᴀ ᴘʜᴏᴛᴏ\n"
+            "→ ɢᴏ ʙᴀᴄᴋ ᴀɴᴅ sᴇɴᴅ ᴀɴʏ ᴘʜᴏᴛᴏ\n"
+            "→ ᴛʜɪs ᴡɪʟʟ ʙᴇ ʏᴏᴜʀ ᴄᴏᴠᴇʀ\n\n"
+            "<b>sᴛᴇᴘ 2️⃣:</b> ᴀᴜᴛᴏᴍᴀᴛɪᴄ sᴀᴠᴇ\n"
+            "→ ᴛʜᴜᴍʙɴᴀɪʟ sᴀᴠᴇs ᴀᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ\n"
+            "→ ʀᴇᴘʟᴀᴄᴇ ᴀɴʏᴛɪᴍᴇ\n\n"
+            "<b>sᴛᴇᴘ 3️⃣:</b> ʀᴇᴀᴅʏ ᴛᴏ ᴜsᴇ\n"
+            "→ sᴇɴᴅ ᴀɴʏ ᴠɪᴅᴇᴏ\n"
+            "→ ᴄᴏᴠᴇʀ ᴀᴘᴘʟɪᴇs ɪɴsᴛᴀɴᴛʟʏ\n\n"
+            "💡 ᴛɪᴘs:\n"
+            "• ʜɪɢʜ-ʀᴇsᴏʟᴜᴛɪᴏɴ ɪᴍᴀɢᴇs\n"
+            "• sqᴜᴀʀᴇ ꜰᴏʀᴍᴀᴛ 1:1\n"
+            "• ᴍᴀx 5ᴍʙ ꜰɪʟᴇ\n\n"
+            "📸 ʀᴇᴀᴅʏ? sᴇɴᴅ ʏᴏᴜʀ ᴘʜᴏᴛᴏ ɴᴏᴡ"
         )
         back_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("⬅️ Back", callback_data="submenu_thumbnails")]
@@ -872,7 +851,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer()
         photo_id = get_thumbnail(user_id)
         if photo_id:
-            text = "👁️ <b>Your Current Thumbnail</b>\n\nThis is the photo that will be applied to your videos. You can change it anytime by uploading a new one!"
+            text = "👁️ ʏᴏᴜʀ ᴄᴜʀʀᴇɴᴛ ᴛʜᴜᴍʙɴᴀɪʟ\n\nᴛʜɪs ᴘʜᴏᴛᴏ ᴡɪʟʟ ʙᴇ ᴀᴘᴘʟɪᴇᴅ ᴛᴏ ʏᴏᴜʀ ᴠɪᴅᴇᴏs\nᴄʜᴀɴɢᴇ ɪᴛ ᴀɴʏᴛɪᴍᴇ ʙʏ ᴜᴘʟᴏᴀᴅɪɴɢ ᴀ ɴᴇᴡ ᴏɴᴇ"
             back_kb = InlineKeyboardMarkup([
                 [InlineKeyboardButton("⬅️ Back", callback_data="submenu_thumbnails")]
             ])
@@ -891,7 +870,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.error(f"Error sending thumbnail: {e}")
         else:
-            text = "❌ <b>No Thumbnail Saved Yet</b>\n\nYou haven't uploaded a thumbnail. Send a photo to the bot to create one now!"
+            text = "❌ ɴᴏ ᴛʜᴜᴍʙɴᴀɪʟ sᴀᴠᴇᴅ ʏᴇᴛ\n\nꜱᴇɴᴅ ᴀ ᴘʜᴏᴛᴏ ᴛᴏ ᴄʀᴇᴀᴛᴇ ᴏɴᴇ ɴᴏᴡ"
             back_kb = InlineKeyboardMarkup([
                 [InlineKeyboardButton("⬅️ Back", callback_data="submenu_thumbnails")]
             ])
@@ -908,9 +887,9 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "thumb_delete":
         await query.answer()
         if delete_thumbnail(user_id):
-            text = "✅ <b>Thumbnail Deleted Successfully</b>\n\nYour saved thumbnail has been removed from the system. You can upload a new one anytime!"
+            text = "✅ ᴛʜᴜᴍʙɴᴀɪʟ ᴅᴇʟᴇᴛᴇᴅ\n\nʀᴇᴍᴏᴠᴇᴅ ꜰʀᴏᴍ sʏsᴛᴇᴍ. ᴜᴘʟᴏᴀᴅ ɴᴇᴡ ᴏɴᴇ ᴀɴʏᴛɪᴍᴇ"
         else:
-            text = "⚠️ <b>No Thumbnail Found</b>\n\nYou don't have a saved thumbnail yet. Send a photo to create one!"
+            text = "⚠️ ɴᴏ ᴛʜᴜᴍʙɴᴀɪʟ ꜰᴏᴜɴᴅ\n\nꜱᴇɴᴅ ᴀ ᴘʜᴏᴛᴏ ᴛᴏ ᴄʀᴇᴀᴛᴇ ᴏɴᴇ"
         back_kb = InlineKeyboardMarkup([
             [InlineKeyboardButton("⬅️ Back", callback_data="submenu_thumbnails")]
         ])
@@ -935,7 +914,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def open_home(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
-        fancy_text("Welcome to Instant Cover Bot") + "\n\n"
+        "ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ɪɴsᴛᴀɴᴛ ᴄᴏᴠᴇʀ ʙᴏᴛ\n\n"
         "<b>🎬 Professional Video Cover Tool</b>\n\n"
         "<b>Quick Start:</b>\n\n"
         "📸 <b>Upload Photo</b>\n"
@@ -953,10 +932,10 @@ async def open_home(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("❓ Help", callback_data="menu_help"),
-         InlineKeyboardButton("ℹ️ About", callback_data="menu_about")],
-        [InlineKeyboardButton("⚙️ Settings", callback_data="menu_settings"),
-         InlineKeyboardButton("👨‍💻 Developer", callback_data="menu_developer")],
+        [InlineKeyboardButton("❓ ʜᴇʟᴘ", callback_data="menu_help"),
+         InlineKeyboardButton("ℹ️ ᴀʙᴏᴜᴛ", callback_data="menu_about")],
+        [InlineKeyboardButton("⚙️ sᴇᴛᴛɪɴɢs", callback_data="menu_settings"),
+         InlineKeyboardButton("👨‍💻 ᴅᴇᴠᴇʟᴏᴘᴇʀ", callback_data="menu_developer")],
     ])
     
     # Get home menu banner
@@ -1032,7 +1011,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Check if user is banned
     if is_user_banned(user_id):
-        await update.message.reply_text("🚫 <b>Access Denied</b>\n\nYour account has been restricted from using this bot. Please contact support if you believe this is an error.", parse_mode="HTML")
+        await update.message.reply_text("🚫 ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ\n\nʏᴏᴜʀ ᴀᴄᴄᴏᴜɴᴛ ʜᴀs ʙᴇᴇɴ ʀᴇsᴛʀɪᴄᴛᴇᴅ. ᴄᴏɴᴛᴀᴄᴛ sᴜᴘᴘᴏʀᴛ.", parse_mode="HTML")
         return
     
     # Log new user (if first time)
@@ -1049,7 +1028,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     text = (
-        fancy_text("Welcome to Instant Cover Bot") + "\n\n"
+        "ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ɪɴsᴛᴀɴᴛ ᴄᴏᴠᴇʀ ʙᴏᴛ\n\n"
         "<b>🎬 Professional Video Cover Tool</b>\n\n"
         "<b>Quick Start:</b>\n\n"
         "📸 <b>Upload Photo</b>\n"
@@ -1067,15 +1046,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     # Build home menu with all buttons
     kb_rows = [
-        [InlineKeyboardButton("❓ Help", callback_data="menu_help"),
-         InlineKeyboardButton("ℹ️ About", callback_data="menu_about")],
-        [InlineKeyboardButton("⚙️ Settings", callback_data="menu_settings"),
-         InlineKeyboardButton("👨‍💻 Developer", callback_data="menu_developer")],
+        [InlineKeyboardButton("❓ ʜᴇʟᴘ", callback_data="menu_help"),
+         InlineKeyboardButton("ℹ️ ᴀʙᴏᴜᴛ", callback_data="menu_about")],
+        [InlineKeyboardButton("⚙️ sᴇᴛᴛɪɴɢs", callback_data="menu_settings"),
+         InlineKeyboardButton("👨‍💻 ᴅᴇᴠᴇʟᴏᴘᴇʀ", callback_data="menu_developer")],
     ]
     
     # Add admin panel button if user is admin
     if is_admin(user_id):
-        kb_rows.append([InlineKeyboardButton("🛡️ Admin Panel", callback_data="admin_back")])
+        kb_rows.append([InlineKeyboardButton("🛡️ ᴀᴅᴍɪɴ ᴘᴀɴᴇʟ", callback_data="admin_back")])
     
     kb = InlineKeyboardMarkup(kb_rows)
     banner = HOME_MENU_BANNER_URL
@@ -1116,22 +1095,22 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
     text = (
-        "📖 " + fancy_text("Complete Guide") + "\n\n"
-        "<b>Step-By-Step Instructions:</b>\n\n"
-        "<b>1️⃣ Upload Your Thumbnail</b>\n"
-        "   • Send a high-quality photo\n"
-        "   • It saves automatically as your cover\n\n"
-        "<b>2️⃣ Apply To Videos</b>\n"
-        "   • Send any video file\n"
-        "   • Cover applies instantly\n\n"
-        "<b>3️⃣ Download & Share</b>\n"
-        "   • Your video with cover is ready\n"
-        "   • Download and share anywhere\n\n"
-        "<b>💡 Pro Tips:</b>\n"
-        "✓ High-quality photos work best\n"
-        "✓ Update thumbnail anytime\n"
-        "✓ Remove old covers from settings\n\n"
-        "📞 Need help? Contact: /about"
+        "📖 ᴄᴏᴍᴘʟᴇᴛᴇ ɢᴜɪᴅᴇ\n\n"
+        "<b>sᴛᴇᴘ-ʙʏ-sᴛᴇᴘ ɪɴsᴛʀᴜᴄᴛɪᴏɴs:</b>\n\n"
+        "<b>1️⃣ ᴜᴘʟᴏᴀᴅ ʏᴏᴜʀ ᴛʜᴜᴍʙɴᴀɪʟ</b>\n"
+        "   • sᴇɴᴅ ᴀ ʜɪɢʜ-qᴜᴀʟɪᴛʏ ᴘʜᴏᴛᴏ\n"
+        "   • ɪᴛ sᴀᴠᴇs ᴀᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ ᴀs ʏᴏᴜʀ ᴄᴏᴠᴇʀ\n\n"
+        "<b>2️⃣ ᴀᴘᴘʟʏ ᴛᴏ ᴠɪᴅᴇᴏs</b>\n"
+        "   • sᴇɴᴅ ᴀɴʏ ᴠɪᴅᴇᴏ ꜰɪʟᴇ\n"
+        "   • ᴄᴏᴠᴇʀ ᴀᴘᴘʟɪᴇs ɪɴsᴛᴀɴᴛʟʏ\n\n"
+        "<b>3️⃣ ᴅᴏᴡɴʟᴏᴀᴅ & sʜᴀʀᴇ</b>\n"
+        "   • ʏᴏᴜʀ ᴠɪᴅᴇᴏ ᴡɪᴛʜ ᴄᴏᴠᴇʀ ɪs ʀᴇᴀᴅʏ\n"
+        "   • ᴅᴏᴡɴʟᴏᴀᴅ ᴀɴᴅ sʜᴀʀᴇ ᴀɴʏᴡʜᴇʀᴇ\n\n"
+        "<b>💡 ᴘʀᴏ ᴛɪᴘs:</b>\n"
+        "✓ ʜɪɢʜ-qᴜᴀʟɪᴛʏ ᴘʜᴏᴛᴏs ᴡᴏʀᴋ ʙᴇsᴛ\n"
+        "✓ ᴜᴘᴅᴀᴛᴇ ᴛʜᴜᴍʙɴᴀɪʟ ᴀɴʏᴛɪᴍᴇ\n"
+        "✓ ʀᴇᴍᴏᴠᴇ ᴏʟᴅ ᴄᴏᴠᴇʀs ꜰʀᴏᴍ sᴇᴛᴛɪɴɢs\n\n"
+        "📞 ɴᴇᴇᴅ ʜᴇʟᴘ? ᴄᴏɴᴛᴀᴄᴛ: /ᴀʙᴏᴜᴛ"
     )
     banner = HOME_MENU_BANNER_URL
     if banner:
@@ -1148,24 +1127,24 @@ async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
         return
     text = (
-        "🤖 " + fancy_text("About This Bot") + "\n\n"
-        "<b>Professional Video Cover Tool</b>\n\n"
-        "<b>Description:</b>\n"
-        "Apply custom thumbnails to your videos instantly\n\n"
-        "<b>Premium Features:</b>\n"
-        "✅ Lightning-fast processing\n"
-        "✅ High-quality thumbnail storage\n"
-        "✅ Professional video covers\n"
-        "✅ Simple interface\n"
-        "✅ Instant results\n\n"
-        "<b>Technology Stack:</b>\n"
-        "⚙️ Advanced Python API\n"
-        "🎬 FFmpeg video processing\n"
-        "🤖 Telegram Bot Framework\n\n"
-        "<b>Support & Contact:</b>\n"
-        f"👨‍💻 Developer: @{OWNER_USERNAME or 'Support'}\n"
-        "📧 For help: /about → Developer\n\n"
-        "Thank you for using this bot! 🎬"
+        "🤖 ᴀʙᴏᴜᴛ ᴛʜɪs ʙᴏᴛ\n\n"
+        "<b>ᴘʀᴏꜰᴇssɪᴏɴᴀʟ ᴠɪᴅᴇᴏ ᴄᴏᴠᴇʀ ᴛᴏᴏʟ</b>\n\n"
+        "<b>ᴅᴇsᴄʀɪᴘᴛɪᴏɴ:</b>\n"
+        "ᴀᴘᴘʟʏ ᴄᴜsᴛᴏᴍ ᴛʜᴜᴍʙɴᴀɪʟs ᴛᴏ ʏᴏᴜʀ ᴠɪᴅᴇᴏs ɪɴsᴛᴀɴᴛʟʏ\n\n"
+        "<b>ᴘʀᴇᴍɪᴜᴍ ꜰᴇᴀᴛᴜʀᴇs:</b>\n"
+        "✅ ʟɪɢʜᴛɴɪɴɢ-ꜰᴀsᴛ ᴘʀᴏᴄᴇssɪɴɢ\n"
+        "✅ ʜɪɢʜ-qᴜᴀʟɪᴛʏ ᴛʜᴜᴍʙɴᴀɪʟ sᴛᴏʀᴀɢᴇ\n"
+        "✅ ᴘʀᴏꜰᴇssɪᴏɴᴀʟ ᴠɪᴅᴇᴏ ᴄᴏᴠᴇʀs\n"
+        "✅ sɪᴍᴘʟᴇ ɪɴᴛᴇʀꜰᴀᴄᴇ\n"
+        "✅ ɪɴsᴛᴀɴᴛ ʀᴇsᴜʟᴛs\n\n"
+        "<b>ᴛᴇᴄʜɴᴏʟᴏɢʏ sᴛᴀᴄᴋ:</b>\n"
+        "⚙️ ᴀᴅᴠᴀɴᴄᴇᴅ ᴘʏᴛʜᴏɴ ᴀᴘɪ\n"
+        "🎬 ꜰꜰᴍᴘᴇɢ ᴠɪᴅᴇᴏ ᴘʀᴏᴄᴇssɪɴɢ\n"
+        "🤖 ᴛᴇʟᴇɢʀᴀᴍ ʙᴏᴛ ꜰʀᴀᴍᴇᴡᴏʀᴋ\n\n"
+        "<b>sᴜᴘᴘᴏʀᴛ & ᴄᴏɴᴛᴀᴄᴛ:</b>\n"
+        f"👨‍💻 ᴅᴇᴠᴇʟᴏᴘᴇʀ: @{OWNER_USERNAME or 'sᴜᴘᴘᴏʀᴛ'}\n"
+        "📧 ꜰᴏʀ ʜᴇʟᴘ: /ᴀʙᴏᴜᴛ → ᴅᴇᴠᴇʟᴏᴘᴇʀ\n\n"
+        "ᴛʜᴀɴᴋ ʏᴏᴜ ꜰᴏʀ ᴜsɪɴɢ ᴛʜɪs ʙᴏᴛ! 🎬"
     )
     banner = HOME_MENU_BANNER_URL
     if banner:
@@ -1183,20 +1162,20 @@ async def settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     user_id = update.message.from_user.id
     # Show thumbnail status
-    thumb_status = "✅ Saved & Ready" if has_thumbnail(user_id) else "❌ Not Saved Yet"
+    thumb_status = "✅ sᴀᴠᴇᴅ & ʀᴇᴀᴅʏ" if has_thumbnail(user_id) else "❌ ɴᴏᴛ sᴀᴠᴇᴅ ʏᴇᴛ"
     
     text = (
-        "⚙️ " + fancy_text("Your Settings") + "\n\n"
-        "<b>Account Information:</b>\n"
-        f"👤 User ID: <code>{user_id}</code>\n\n"
-        "<b>Thumbnail Status:</b>\n"
+        "⚙️ ʏᴏᴜʀ sᴇᴛᴛɪɴɢs\n\n"
+        "<b>ᴀᴄᴄᴏᴜɴᴛ ɪɴꜰᴏʀᴍᴀᴛɪᴏɴ:</b>\n"
+        f"👤 ᴜsᴇʀ ɪᴅ: <code>{user_id}</code>\n\n"
+        "<b>ᴛʜᴜᴍʙɴᴀɪʟ sᴛᴀᴛᴜs:</b>\n"
         f"{thumb_status}\n\n"
-        "<b>Management Options:</b>\n"
-        "🖼️ View and manage your thumbnails"
+        "<b>ᴍᴀɴᴀɢᴇᴍᴇɴᴛ ᴏᴘᴛɪᴏɴs:</b>\n"
+        "🖼️ ᴠɪᴇᴡ ᴀɴᴅ ᴍᴀɴᴀɢᴇ ʏᴏᴜʀ ᴛʜᴜᴍʙɴᴀɪʟs"
     )
     settings_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🖼 Thumbnails", callback_data="submenu_thumbnails")],
-        [InlineKeyboardButton("⬅️ Back", callback_data="menu_back")]
+        [InlineKeyboardButton("🖼 ᴛʜᴜᴍʙɴᴀɪʟs", callback_data="submenu_thumbnails")],
+        [InlineKeyboardButton("⬅️ ʙᴀᴄᴋ", callback_data="menu_back")]
     ])
     banner = HOME_MENU_BANNER_URL
     if banner:
@@ -1224,8 +1203,8 @@ async def remover(update: Update, context: ContextTypes.DEFAULT_TYPE):
         log_msg = format_log_message(user_id, username, log_data["action"])
         await send_log(context, log_msg)
         
-        return await update.message.reply_text("✅ <b>Thumbnail Removed Successfully</b>\n\nYour thumbnail has been deleted. Upload a new one anytime!", reply_to_message_id=update.message.message_id, parse_mode="HTML")
-    await update.message.reply_text("⚠️ <b>No Thumbnail to Remove</b>\n\nYou haven't saved a thumbnail yet. Send a photo first!", reply_to_message_id=update.message.message_id, parse_mode="HTML")
+        return await update.message.reply_text("✅ ᴛʜᴜᴍʙɴᴀɪʟ ʀᴇᴍᴏᴠᴇᴅ\n\nᴅᴇʟᴇᴛᴇᴅ sᴜᴄᴄᴇssꜰᴜʟʟʏ. ᴜᴘʟᴏᴀᴅ ᴀ ɴᴇᴡ ᴏɴᴇ ᴀɴʏᴛɪᴍᴇ!", reply_to_message_id=update.message.message_id, parse_mode="HTML")
+    await update.message.reply_text("⚠️ ɴᴏ ᴛʜᴜᴍʙɴᴀɪʟ ᴛᴏ ʀᴇᴍᴏᴠᴇ\n\nꜱᴇɴᴅ ᴀ ᴘʜᴏᴛᴏ ꜰɪʀsᴛ!", reply_to_message_id=update.message.message_id, parse_mode="HTML")
 
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
@@ -1246,8 +1225,8 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_msg = format_log_message(user_id, username, log_data["action"])
     await send_log(context, log_msg)
     
-    action_text = "Updated" if is_replace else "Saved"
-    await update.message.reply_text(f"✅ <b>Thumbnail {action_text} Successfully!</b>\n\nYour new thumbnail is ready. Send any video and the cover will be applied automatically! 🎬", reply_to_message_id=update.message.message_id, parse_mode="HTML")
+    action_text = "ᴜᴘᴅᴀᴛᴇᴅ" if is_replace else "sᴀᴠᴇᴅ"
+    await update.message.reply_text("✅ ᴛʜᴜᴍʙɴᴀɪʟ " + action_text + "\n\nʀᴇᴀᴅʏ! sᴇɴᴅ ᴀɴʏ ᴠɪᴅᴇᴏ ᴛᴏ ᴀᴘᴘʟʏ ᴄᴏᴠᴇʀ", reply_to_message_id=update.message.message_id, parse_mode="HTML")
 
 async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_force_sub(update, context):
@@ -1256,8 +1235,8 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.message.from_user.username or "No Username"
     cover = get_thumbnail(user_id)
     if not cover:
-        return await update.message.reply_text("❌ <b>No Thumbnail Found</b>\n\nPlease save a thumbnail first by sending a photo!\n\nUse /settings to manage your thumbnails.", reply_to_message_id=update.message.message_id, parse_mode="HTML")
-    msg = await update.message.reply_text("⏳ <b>Processing Video...</b>\n\nApplying your thumbnail cover... This may take a few seconds. Please wait! 🎬", reply_to_message_id=update.message.message_id, parse_mode="HTML")
+        return await update.message.reply_text("❌ ɴᴏ ᴛʜᴜᴍʙɴᴀɪʟ ꜰᴏᴜɴᴅ\n\nꜱᴇɴᴅ ᴀ ᴘʜᴏᴛᴏ ꜰɪʀsᴛ ᴛᴏ sᴀᴠᴇ ᴛʜᴜᴍʙɴᴀɪʟ", reply_to_message_id=update.message.message_id, parse_mode="HTML")
+    msg = await update.message.reply_text("⏳ ᴘʀᴏᴄᴇssɪɴɢ ᴠɪᴅᴇᴏ\n\nᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ᴀ ꜰᴇᴡ sᴇᴄᴏɴᴅs", reply_to_message_id=update.message.message_id, parse_mode="HTML")
     
     video = update.message.video.file_id
     
@@ -1276,11 +1255,11 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if LOG_CHANNEL_ID:
             try:
                 log_caption = (
-                    f"🎥 <b>Video Processing Completed</b>\n\n"
-                    f"👤 User ID: <code>{user_id}</code>\n"
-                    f"📌 Username: @{username}\n"
-                    f"📝 Caption: {original_caption or 'No Caption'}\n"
-                    f"⏰ Timestamp: {update.message.date}"
+                    f"🎥 <b>ᴠɪᴅᴇᴏ ᴘʀᴏᴄᴇssɪɴɢ ᴄᴏᴍᴘʟᴇᴛᴇᴅ</b>\n\n"
+                    f"👤 ᴜsᴇʀ ɪᴅ: <code>{user_id}</code>\n"
+                    f"📌 ᴜsᴇʀɴᴀᴍᴇ: @{username}\n"
+                    f"📝 ᴄᴀᴘᴛɪᴏɴ: {original_caption or 'ɴᴏ ᴄᴀᴘᴛɪᴏɴ'}\n"
+                    f"⏰ ᴛɪᴍᴇsᴛᴀᴍᴘ: {update.message.date}"
                 )
                 await context.bot.send_video(
                     chat_id=LOG_CHANNEL_ID,
@@ -1294,7 +1273,7 @@ async def video_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.error(f"❌ Error forwarding video to log channel: {e}")
     except Exception as e:
-        await update.message.reply_text(f"❌ <b>Processing Failed</b>\n\nError: {str(e)[:100]}\n\nPlease try again or contact support.", parse_mode="HTML")
+        await update.message.reply_text("❌ ᴘʀᴏᴄᴇssɪɴɢ ꜰᴀɪʟᴇᴅ\n\nᴇʀʀᴏʀ: " + str(e)[:50], parse_mode="HTML")
 
 
 async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1310,13 +1289,13 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not success:
             await msg.edit_text(
-                "❌ <b>Update Failed</b>\n\n"
-                "Could not fetch updates from upstream.\n"
-                "Please check:\n"
-                "• UPSTREAM_REPO is correct\n"
-                "• UPSTREAM_BRANCH is correct\n"
-                "• Internet connection is active\n\n"
-                "Check logs for details.",
+                "❌ <b>ᴜᴘᴅᴀᴛᴇ ꜰᴀɪʟᴇᴅ</b>\n\n"
+                "ᴄᴏᴜʟᴅ ɴᴏᴛ ꜰᴇᴛᴄʜ ᴜᴘᴅᴀᴛᴇs ꜰʀᴏᴍ ᴜᴘsᴛʀᴇᴀᴍ.\n"
+                "ᴘʟᴇᴀsᴇ ᴄʜᴇᴄᴋ:\n"
+                "• ᴜᴘsᴛʀᴇᴀᴍ_ʀᴇᴘᴏ ɪs ᴄᴏʀʀᴇᴄᴛ\n"
+                "• ᴜᴘsᴛʀᴇᴀᴍ_ʙʀᴀɴᴄʜ ɪs ᴄᴏʀʀᴇᴄᴛ\n"
+                "• ɪɴᴛᴇʀɴᴇᴛ ᴄᴏɴɴᴇᴄᴛɪᴏɴ ɪs ᴀᴄᴛɪᴠᴇ\n\n"
+                "ᴄʜᴇᴄᴋ ʟᴏɢs ꜰᴏʀ ᴅᴇᴛᴀɪʟs.",
                 parse_mode="HTML"
             )
             logger.error(f"Update failed - bot not restarting")
@@ -1324,9 +1303,9 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Update successful - now restart
         await msg.edit_text(
-            "✅ <b>Update Successful!</b>\n\n"
-            "🔄 Restarting bot with new changes...\n"
-            "<i>Please wait...</i>",
+            "✅ <b>ᴜᴘᴅᴀᴛᴇ sᴜᴄᴄᴇssꜰᴜʟ!</b>\n\n"
+            "🔄 ʀᴇsᴛᴀʀᴛɪɴɢ ʙᴏᴛ ᴡɪᴛʜ ɴᴇᴡ ᴄʜᴀɴɢᴇs...\n"
+            "<i>ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ...</i>",
             parse_mode="HTML"
         )
         
@@ -1338,12 +1317,12 @@ async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.execv(sys.executable, [sys.executable] + sys.argv)
         
     except Exception as e:
-        logger.error(f"❌ Error during restart/update: {e}")
+        logger.error(f"❌ ᴇʀʀᴏʀ ᴅᴜʀɪɴɢ ʀᴇsᴛᴀʀᴛ/ᴜᴘᴅᴀᴛᴇ: {e}")
         await msg.edit_text(
-            f"❌ <b>Error During Update</b>\n\n"
-            f"An unexpected error occurred:\n"
+            f"❌ <b>ᴇʀʀᴏʀ ᴅᴜʀɪɴɢ ᴜᴘᴅᴀᴛᴇ</b>\n\n"
+            f"ᴀɴ ᴜɴᴇxᴘᴇᴄᴛᴇᴅ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ:\n"
             f"<code>{str(e)[:100]}</code>\n\n"
-            f"Check logs for full details.",
+            f"ᴄʜᴇᴄᴋ ʟᴏɢs ꜰᴏʀ ꜰᴜʟʟ ᴅᴇᴛᴀɪʟs.",
             parse_mode="HTML"
         )
 
@@ -1356,25 +1335,25 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     text = (
-        "🛡️ " + fancy_text("Admin Control Panel") + "\n\n"
-        "👑 <b>Welcome Admin</b>\n\n"
-        "<b>Management Tools Available:</b>\n\n"
-        "📊 <b>Statistics</b> – User analytics\n"
-        "⏱️ <b>Status</b> – Bot performance\n"
-        "👥 <b>Users</b> – Total users count\n"
-        "🚫 <b>Ban User</b> – Block users\n"
-        "✅ <b>Unban User</b> – Restore access\n"
-        "📢 <b>Broadcast</b> – Send announcements\n\n"
-        "Select an option:"
+        "🛡️ ᴀᴅᴍɪɴ ᴄᴏɴᴛʀᴏʟ ᴘᴀɴᴇʟ\n\n"
+        "👑 <b>ᴡᴇʟᴄᴏᴍᴇ ᴀᴅᴍɪɴ</b>\n\n"
+        "<b>ᴍᴀɴᴀɢᴇᴍᴇɴᴛ ᴛᴏᴏʟs ᴀᴠᴀɪʟᴀʙʟᴇ:</b>\n\n"
+        "📊 <b>sᴛᴀᴛɪsᴛɪᴄs</b> – ᴜsᴇʀ ᴀɴᴀʟʏᴛɪᴄs\n"
+        "⏱️ <b>sᴛᴀᴛᴜs</b> – ʙᴏᴛ ᴘᴇʀꜰᴏʀᴍᴀɴᴄᴇ\n"
+        "👥 <b>ᴜsᴇʀs</b> – ᴛᴏᴛᴀʟ ᴜsᴇʀs ᴄᴏᴜɴᴛ\n"
+        "🚫 <b>ʙᴀɴ ᴜsᴇʀ</b> – ʙʟᴏᴄᴋ ᴜsᴇʀs\n"
+        "✅ <b>ᴜɴʙᴀɴ ᴜsᴇʀ</b> – ʀᴇsᴛᴏʀᴇ ᴀᴄᴄᴇss\n"
+        "📢 <b>ʙʀᴏᴀᴅᴄᴀsᴛ</b> – sᴇɴᴅ ᴀɴɴᴏᴜɴᴄᴇᴍᴇɴᴛs\n\n"
+        "sᴇʟᴇᴄᴛ ᴀɴ ᴏᴘᴛɪᴏɴ:"
     )
     admin_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📊 Statistics", callback_data="admin_stats"),
-         InlineKeyboardButton("⏱️ Status", callback_data="admin_status")],
-        [InlineKeyboardButton("👥 Users", callback_data="admin_users"),
-         InlineKeyboardButton("🚫 Ban User", callback_data="admin_ban")],
-        [InlineKeyboardButton("✅ Unban User", callback_data="admin_unban"),
-         InlineKeyboardButton("📢 Broadcast", callback_data="admin_broadcast")],
-        [InlineKeyboardButton("⬅️ Back", callback_data="menu_back")],
+        [InlineKeyboardButton("📊 sᴛᴀᴛɪsᴛɪᴄs", callback_data="admin_stats"),
+         InlineKeyboardButton("⏱️ sᴛᴀᴛᴜs", callback_data="admin_status")],
+        [InlineKeyboardButton("👥 ᴜsᴇʀs", callback_data="admin_users"),
+         InlineKeyboardButton("🚫 ʙᴀɴ ᴜsᴇʀ", callback_data="admin_ban")],
+        [InlineKeyboardButton("✅ ᴜɴʙᴀɴ ᴜsᴇʀ", callback_data="admin_unban"),
+         InlineKeyboardButton("📢 ʙʀᴏᴀᴅᴄᴀsᴛ", callback_data="admin_broadcast")],
+        [InlineKeyboardButton("⬅️ ʙᴀᴄᴋ", callback_data="menu_back")],
     ])
     
     # Get home menu banner
@@ -1411,8 +1390,8 @@ async def ban_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = update.message.text.split(None, 2)
     if len(args) < 2:
         return await update.message.reply_text(
-            "❌ Usage: /ban <user_id> [reason]\n"
-            "Example: /ban 123456789 Spam"
+            "❌ ᴜsᴀɢᴇ: /ʙᴀɴ <ᴜsᴇʀ_ɪᴅ> [ʀᴇᴀsᴏɴ]\n"
+            "📌 ᴇxᴀᴍᴘʟᴇ: /ʙᴀɴ 123456789 sᴘᴀᴍ"
         )
     
     try:
@@ -1421,8 +1400,8 @@ async def ban_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         if ban_user(user_id, reason):
             await update.message.reply_text(
-                f"✅ <b>User {user_id} Banned</b>\n"
-                f"Reason: {reason}",
+                "✅ ᴜsᴇʀ " + str(user_id) + " ʙᴀɴɴᴇᴅ\n"
+                f"📌 ʀᴇᴀsᴏɴ: {reason}",
                 parse_mode="HTML"
             )
             
@@ -1431,11 +1410,11 @@ async def ban_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             log_msg = format_log_message(user_id, "User", log_data["action"], log_data.get("details", ""))
             await send_log(context, log_msg)
         else:
-            await update.message.reply_text("❌ Failed to ban user")
+            await update.message.reply_text("❌ ꜰᴀɪʟᴇᴅ ᴛᴏ ʙᴀɴ ᴜsᴇʀ")
     except ValueError:
-        await update.message.reply_text("❌ Invalid user ID")
+        await update.message.reply_text("❌ ɪɴᴠᴀʟɪᴅ ᴜsᴇʀ ɪᴅ")
     except Exception as e:
-        await update.message.reply_text(f"❌ Error: {e}")
+        await update.message.reply_text("❌ ᴇʀʀᴏʀ: " + str(e))
 
 
 async def unban_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1446,25 +1425,25 @@ async def unban_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = update.message.text.split()
     if len(args) < 2:
         return await update.message.reply_text(
-            "❌ Usage: /unban <user_id>\n"
-            "Example: /unban 123456789"
+            "❌ ᴜsᴀɢᴇ: /ᴜɴʙᴀɴ <ᴜsᴇʀ_ɪᴅ>\n"
+            "📌 ᴇxᴀᴍᴘʟᴇ: /ᴜɴʙᴀɴ 123456789"
         )
     
     try:
         user_id = int(args[1])
         if unban_user(user_id):
-            await update.message.reply_text(f"✅ User {user_id} Unbanned")
+            await update.message.reply_text("✅ ᴜsᴇʀ " + str(user_id) + " ᴜɴʙᴀɴɴᴇᴅ")
             
             # Log unban action
             log_data = log_user_unbanned(user_id, "User")
             log_msg = format_log_message(user_id, "User", log_data["action"])
             await send_log(context, log_msg)
         else:
-            await update.message.reply_text("❌ Failed to unban user")
+            await update.message.reply_text("❌ ꜰᴀɪʟᴇᴅ ᴛᴏ ᴜɴʙᴀɴ ᴜsᴇʀ")
     except ValueError:
-        await update.message.reply_text("❌ Invalid user ID")
+        await update.message.reply_text("❌ ɪɴᴠᴀʟɪᴅ ᴜsᴇʀ ɪᴅ")
     except Exception as e:
-        await update.message.reply_text(f"❌ Error: {e}")
+        await update.message.reply_text("❌ ᴇʀʀᴏʀ: " + str(e))
 
 
 async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1474,10 +1453,10 @@ async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     stats = get_stats()
     text = (
-        "📊 <b>Bot Statistics</b>\n\n"
-        f"👥 Total Users: <b>{stats['total_users']}</b>\n"
-        f"🚫 Banned Users: <b>{stats['banned_users']}</b>\n"
-        f"🖼 Users with Thumbnail: <b>{stats['users_with_thumbnail']}</b>"
+        "📊 ʙᴏᴛ sᴛᴀᴛɪsᴛɪᴄs\n\n"
+        f"👥 ᴛᴏᴛᴀʟ ᴜsᴇʀs: {stats['total_users']}\n"
+        f"🚫 ʙᴀɴɴᴇᴅ ᴜsᴇʀs: {stats['banned_users']}\n"
+        f"🖼 ᴜsᴇʀs ᴡɪᴛʜ ᴛʜᴜᴍʙɴᴀɪʟ: {stats['users_with_thumbnail']}"
     )
     await update.message.reply_text(text, parse_mode="HTML")
 
@@ -1502,24 +1481,24 @@ async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ram_percent = ram.percent
         
         text = (
-            "⏱️ <b>Bot Status</b>\n\n"
-            f"🟢 Status: <b>Online</b>\n"
-            f"⏰ Uptime: <b>{uptime_hours}h {uptime_mins}m</b>\n\n"
-            f"🖥 <b>System Resources:</b>\n"
-            f"CPU: <b>{cpu_percent}%</b>\n"
-            f"RAM: <b>{ram_percent}%</b> ({ram.used // (1024**2)} MB / {ram.total // (1024**2)} MB)"
+            "⏱️ ʙᴏᴛ sᴛᴀᴛᴜs\n\n"
+            f"🟢 sᴛᴀᴛᴜs: ᴏɴʟɪɴᴇ\\n"
+            f"⏰ ᴜᴘᴛɪᴍᴇ: {uptime_hours}ʜ {uptime_mins}ᴍ\\n\\n"
+            f"🖥 sʏsᴛᴇᴍ ʀᴇsᴏᴜʀᴄᴇs:\\n"
+            f"🔴 ᴄᴘᴜ: {cpu_percent}%\\n"
+            f"🟡 ʀᴀᴍ: {ram_percent}% ({ram.used // (1024**2)} ᴍʙ / {ram.total // (1024**2)} ᴍʙ)"
         )
         await update.message.reply_text(text, parse_mode="HTML")
     except ImportError:
         text = (
-            "⏱️ <b>Bot Status</b>\n\n"
-            f"🟢 Status: <b>Online</b>\n\n"
-            "⚠️ <b>Note:</b> Install <code>psutil</code> for system stats\n"
-            "Run: <code>pip install psutil</code>"
+            "⏱️ ʙᴏᴛ sᴛᴀᴛᴜs\\n\\n"
+            f"🟢 sᴛᴀᴛᴜs: ᴏɴʟɪɴᴇ\\n\\n"
+            "⚠️ ɪɴsᴛᴀʟʟ ᴘsᴜᴛɪʟ ꜰᴏʀ sʏsᴛᴇᴍ sᴛᴀᴛs\\n"
+            "📦 ʀᴜɴ: ᴘɪᴘ ɪɴsᴛᴀʟʟ ᴘsᴜᴛɪʟ"
         )
         await update.message.reply_text(text, parse_mode="HTML")
     except Exception as e:
-        await update.message.reply_text(f"❌ Error: {e}")
+        await update.message.reply_text("❌ ᴇʀʀᴏʀ: " + str(e))
 
 
 async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1530,12 +1509,12 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = update.message.text.split(None, 1)
     if len(args) < 2:
         return await update.message.reply_text(
-            "❌ <b>Usage:</b> /broadcast <message>\n\n"
-            "<b>Example:</b> /broadcast Hello everyone! Check out new features!\n\n"
-            "💡 <b>Tips:</b>\n"
-            "• Message will be sent to all active users\n"
-            "• HTML formatting is supported\n"
-            "• Emojis work great too! 🎉",
+            "❌ ᴜsᴀɢᴇ: /ʙʀᴏᴀᴅᴄᴀsᴛ <ᴍᴇssᴀɢᴇ>\n\n"
+            "📌 ᴇxᴀᴍᴘʟᴇ: /ʙʀᴏᴀᴅᴄᴀsᴛ ʜᴇʟʟᴏ ᴇᴠᴇʀʏᴏɴᴇ!\\n\\n"
+            "💡 ᴛɪᴘs:\\n"
+            "• ᴍᴇssᴀɢᴇ sᴇɴᴛ ᴛᴏ ᴀʟʟ ᴜsᴇʀs\\n"
+            "• ʜᴛᴍʟ ꜰᴏʀᴍᴀᴛᴛɪɴɢ sᴜᴘᴘᴏʀᴛᴇᴅ\\n"
+            "• ᴇᴍᴏᴊɪs ᴡᴏʀᴋ ɢʀᴇᴀᴛ ᴛᴏᴏ",
             parse_mode="HTML"
         )
     
@@ -1543,12 +1522,11 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Show confirmation
     confirm_text = (
-        "📢 <b>Broadcast Confirmation</b>\n\n"
-        f"<b>Message to send:</b>\n"
+        "📢 ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏɴꜰɪʀᴍᴀᴛɪᴏɴ\n\n"
+        f"📝 ᴍᴇssᴀɢᴇ:\\n"
         f"{message_text}\n\n"
-        f"👥 Total Users: <b>{get_total_users()}</b>\n\n"
-        "⚠️ This action cannot be undone!\n"
-        "Proceeding... Messages will be sent now."
+        f"👥 ᴛᴏᴛᴀʟ ᴜsᴇʀs: {get_total_users()}\n\n"
+        "⚠️ ᴘʀᴏᴄᴇssɪɴɢ... sᴇɴᴅɪɴɢ ɴᴏᴡ"
     )
     msg = await update.message.reply_text(confirm_text, parse_mode="HTML")
     
@@ -1562,8 +1540,8 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         if not user_ids:
             await msg.edit_text(
-                "❌ <b>No Users Found</b>\n\n"
-                "There are no users in the database to broadcast to.",
+                "❌ ɴᴏ ᴜsᴇʀs ꜰᴏᴜɴᴅ\n\n"
+                "💭 ᴅᴀᴛᴀʙᴀsᴇ ɪs ᴇᴍᴘᴛʏ",
                 parse_mode="HTML"
             )
             return
@@ -1586,11 +1564,11 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Show final status
         result_text = (
-            "✅ <b>Broadcast Completed!</b>\n\n"
-            f"📤 <b>Messages Sent:</b> {sent}\n"
-            f"❌ <b>Failed:</b> {failed}\n"
-            f"👥 <b>Total Users:</b> {sent + failed}\n\n"
-            f"Success Rate: <b>{(sent/(sent+failed)*100):.1f}%</b>"
+            "✅ ʙʀᴏᴀᴅᴄᴀsᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ\n\n"
+            f"📤 sᴇɴᴛ: {sent}\n"
+            f"❌ ꜰᴀɪʟᴇᴅ: {failed}\n"
+            f"👥 ᴛᴏᴛᴀʟ: {sent + failed}\n\n"
+            f"📊 sᴜᴄᴄᴇss: {(sent/(sent+failed)*100):.1f}%"
         )
         
         await msg.edit_text(result_text, parse_mode="HTML")
@@ -1608,9 +1586,9 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     except Exception as e:
         await msg.edit_text(
-            f"❌ <b>Broadcast Failed</b>\n\n"
-            f"Error: {str(e)[:100]}\n\n"
-            "Check logs for details.",
+            f"❌ ʙʀᴏᴀᴅᴄᴀsᴛ ꜰᴀɪʟᴇᴅ\\n\\n"
+            f"ᴇʀʀᴏʀ: {str(e)[:100]}\\n\\n"
+            "ᴄʜᴇᴄᴋ ʟᴏɢs ꜰᴏʀ ᴅᴇᴛᴀɪʟs.",
             parse_mode="HTML"
         )
         logger.error(f"Broadcast error: {e}", exc_info=True)
